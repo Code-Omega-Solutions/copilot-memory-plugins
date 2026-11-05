@@ -4,3 +4,9 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# memory-sync: rebuildable index, SQLite side files and server log stay local
+data/rag-index/
+data/memory-store/*/*.db-wal
+data/memory-store/*/*.db-shm
+logs/mcp-diagnostics.log
