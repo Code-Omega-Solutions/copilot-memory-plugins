@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +19,19 @@ class InitTests(unittest.TestCase):
 
     def tearDown(self):
         self._tmp.cleanup()
+
+    def test_init_reincludes_store_ignored_by_existing_rules(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        (self.root / ".gitignore").write_text("data/\n*.db\n", encoding="utf-8")
+        out = io.StringIO()
+        self.assertEqual(command_init(self.root, "box", out=out), 0)
+        for name in ("memories.db", "memories.json"):
+            path = f"data/memory-store/box/{name}"
+            ignored = subprocess.run(["git", "check-ignore", "-q", path], cwd=self.root).returncode == 0
+            self.assertFalse(ignored, f"{path} still ignored: {out.getvalue()}")
+        first = (self.root / ".gitignore").read_text(encoding="utf-8")
+        command_init(self.root, "box", out=io.StringIO())
+        self.assertEqual((self.root / ".gitignore").read_text(encoding="utf-8"), first)
 
     def test_init_requires_git(self):
         with contextlib.redirect_stderr(io.StringIO()):
