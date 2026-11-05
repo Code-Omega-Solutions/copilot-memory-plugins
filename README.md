@@ -235,7 +235,7 @@ the Copilot CLI and SDK):
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.0#subdirectory=plugins/memory-sync",
+        "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@5b4a479f7484e9a924a1dea9d64caa4245cd56ab#subdirectory=plugins/memory-sync",
         "memory-store",
         "serve",
         "--workspace",
@@ -245,6 +245,17 @@ the Copilot CLI and SDK):
   }
 }
 ```
+
+Pin the commit of a release tag (shown: `v0.1.0`) rather than the tag itself.
+uv caches a build by commit and starts it in about two seconds. A tag reference
+makes uv contact GitHub on every server start to resolve it, which adds several
+seconds and fails offline. With `uv tool install` (see above) you can use
+`"command": "memory-store"` and `"args": ["serve", "--workspace", "${workspaceFolder}"]`
+instead.
+
+Clients that start the server from the workspace root, such as the Copilot CLI
+and SDK with a workspace `.mcp.json`, can omit `--workspace`: the server then
+uses the git work tree of its working directory.
 
 Register the server **once** per workspace: either the plugin or a workspace
 entry, not both. Two server processes on the same database work, because
