@@ -1,0 +1,25 @@
+{
+  "name": "copilot-memory-plugins",
+  "metadata": {
+    "description": "GitHub Copilot plugins that give agents durable project memory shared between workstations.",
+    "version": "0.1.0"
+  },
+  "owner": {
+    "name": "Code-Omega-Solutions"
+  },
+  "plugins": [
+    {
+      "name": "memory-sync",
+      "description": "Project memory for agents (agent-memory-mcp) with one store per workstation, synchronized through the workspace's git history.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Code-Omega-Solutions",
+        "url": "https://github.com/Code-Omega-Solutions"
+      },
+      "repository": "https://github.com/Code-Omega-Solutions/copilot-memory-plugins",
+      "license": "MIT",
+      "keywords": ["memory", "mcp", "knowledge", "multi-machine", "git"],
+      "source": "./plugins/memory-sync"
+    }
+  ]
+}

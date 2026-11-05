@@ -1,0 +1,19 @@
+[project]
+name = "memory-store-sync"
+version = "0.1.0"
+description = "Per-host agent-memory-mcp store synchronized between workstations through git"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Code-Omega-Solutions" }]
+dependencies = []
+
+[project.scripts]
+memory-store = "memory_store_sync.cli:main"
+
+[project.urls]
+Repository = "https://github.com/Code-Omega-Solutions/copilot-memory-plugins"
+
+[build-system]
+requires = ["uv_build>=0.8,<1"]
+build-backend = "uv_build"

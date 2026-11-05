@@ -1,0 +1,18 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "agent-memory-mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--no-project",
+        "--quiet",
+        "${PLUGIN_ROOT}/bin/memory-store.py",
+        "serve",
+        "--workspace",
+        "${workspaceFolder}"
+      ]
+    }
+  }
+}

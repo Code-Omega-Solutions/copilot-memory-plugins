@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "memory-sync",
+  "version": "0.1.0",
+  "description": "Project memory for agents (agent-memory-mcp) with one store per workstation, synchronized through the workspace's git history.",
+  "author": {
+    "name": "Code-Omega-Solutions",
+    "url": "https://github.com/Code-Omega-Solutions"
+  },
+  "homepage": "https://github.com/Code-Omega-Solutions/copilot-memory-plugins/tree/main/plugins/memory-sync",
+  "repository": "https://github.com/Code-Omega-Solutions/copilot-memory-plugins",
+  "license": "MIT",
+  "keywords": ["memory", "mcp", "knowledge", "multi-machine", "git", "agent-memory-mcp"]
+}
