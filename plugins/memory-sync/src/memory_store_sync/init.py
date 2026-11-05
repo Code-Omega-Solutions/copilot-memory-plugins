@@ -23,6 +23,9 @@ def ignore_rules(config: StoreConfig) -> list[str]:
         f"{config.rag_dir}/",
         f"{config.store_dir}/*/*.db-wal",
         f"{config.store_dir}/*/*.db-shm",
+        f"{config.store_dir}/*.db",
+        f"{config.store_dir}/*.db-wal",
+        f"{config.store_dir}/*.db-shm",
         "logs/mcp-diagnostics.log",
     ]
 

@@ -33,6 +33,13 @@ class InitTests(unittest.TestCase):
         command_init(self.root, "box", out=io.StringIO())
         self.assertEqual((self.root / ".gitignore").read_text(encoding="utf-8"), first)
 
+    def test_init_ignores_flat_server_default_files(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        command_init(self.root, "box", out=io.StringIO())
+        for path in ("data/memory-store/memories.db", "data/memory-store/memories.db-wal", "data/rag-index/vectors.db"):
+            self.assertEqual(subprocess.run(["git", "check-ignore", "-q", path], cwd=self.root).returncode, 0, path)
+        self.assertNotEqual(subprocess.run(["git", "check-ignore", "-q", "data/memory-store/box/memories.db"], cwd=self.root).returncode, 0)
+
     def test_init_requires_git(self):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(command_init(self.root, "box", out=io.StringIO()), 1)

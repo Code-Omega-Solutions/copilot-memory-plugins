@@ -9,4 +9,7 @@ build/
 data/rag-index/
 data/memory-store/*/*.db-wal
 data/memory-store/*/*.db-shm
+data/memory-store/*.db
+data/memory-store/*.db-wal
+data/memory-store/*.db-shm
 logs/mcp-diagnostics.log
