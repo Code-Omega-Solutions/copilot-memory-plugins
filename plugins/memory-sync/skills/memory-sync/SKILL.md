@@ -23,8 +23,9 @@ governed by the workspace's own instructions.
   When `memory-store` is not on `PATH`, agents MUST use
   `uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.0#subdirectory=plugins/memory-sync" memory-store <command>`.
 - Agents MUST NOT run `init` unless the user asked to enable synchronized memory
-  for the workspace. Without `.memory-store.json` the server uses a private
-  per-user store and `status`/`export`/`import` refuse to run.
+  for the workspace. The plugin's `sessionStart` hook runs `setup` automatically;
+  with `MEMORY_STORE_AUTO_SETUP=0` the server uses a private per-user store and
+  `status`/`export`/`import` refuse to run until the user asks for `setup`.
 - Agents MUST NOT edit, copy or hand-merge `memories.db` or `memories.json`.
   The CLI is the only sanctioned writer; it uses the upstream
   `agent-memory-mcp export` / `import` commands.

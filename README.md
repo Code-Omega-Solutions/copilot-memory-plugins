@@ -90,14 +90,31 @@ its working directory.
 
 ## Enable synchronized memory in a workspace
 
-The server never writes into a repository on its own. Until a workspace opts
-in, it uses a private per-user store (the plugin data directory, or
-`~/.copilot-memory`), so installing the plugin is safe everywhere.
+Nothing to do by hand: the plugin's `sessionStart` hook runs
+`memory-store setup` in every git workspace you open. The command is idempotent
+and:
 
-Opt a workspace in once, from its root:
+- checks that `git` is available and installs the pinned server with
+  `go install` into the plugin data directory (skipped when
+  `AGENT_MEMORY_MCP_BIN` or `server.binary` is set; without Go it reports what
+  is missing);
+- runs `init` (below);
+- writes the agent instructions into a managed block of
+  `.github/copilot-instructions.md` (the rest of the file is untouched);
+- seeds the own database from the committed exports of other machines when it
+  does not exist yet.
+
+Commit `.memory-store.json`, `.gitignore` and `.github/copilot-instructions.md`
+once. Set `MEMORY_STORE_AUTO_SETUP=0` to turn the automatic setup off; the
+server then keeps using the private per-user store until you run
+`memory-store setup` or `memory-store init` yourself. Restart the MCP server
+after the first setup (VS Code: **MCP: List Servers** → `agent-memory-mcp` →
+**Restart**).
+
+To run it manually, or when your client does not run plugin hooks:
 
 ```shell
-uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.0#subdirectory=plugins/memory-sync" memory-store init
+uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.0#subdirectory=plugins/memory-sync" memory-store setup
 ```
 
 To get a shorter command, install the CLI once per machine:

@@ -6,6 +6,7 @@ directly. Diagnostics go to stderr only, because stdout carries the protocol.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import signal
@@ -16,7 +17,7 @@ from typing import Mapping, Sequence
 
 from .config import StoreConfig
 from .store import host_paths
-from .workspace import StoreLocation
+from .workspace import StoreLocation, fallback_root
 
 BINARY_ENV = "AGENT_MEMORY_MCP_BIN"
 NO_RUNTIME_EXIT = 2
@@ -26,11 +27,21 @@ class NoServerRuntime(RuntimeError):
     pass
 
 
+def managed_binary_path(config: StoreConfig, environ: Mapping[str, str]) -> Path:
+    """Where ``memory-store setup`` installs the pinned server; one folder per module version."""
+    tag = hashlib.sha256(config.module.encode()).hexdigest()[:12]
+    name = "agent-memory-mcp.exe" if sys.platform == "win32" else "agent-memory-mcp"
+    return fallback_root(environ) / "bin" / tag / name
+
+
 def server_command(config: StoreConfig, environ: Mapping[str, str], which=shutil.which) -> list[str]:
-    """Explicit binary first, otherwise ``go run`` of the pinned module."""
+    """Explicit binary, then the binary installed by ``setup``, otherwise ``go run`` of the pinned module."""
     binary = environ.get(BINARY_ENV, "").strip() or config.binary
     if binary:
         return [binary]
+    managed = managed_binary_path(config, environ)
+    if managed.is_file():
+        return [str(managed)]
     go = which("go")
     if go is None:
         raise NoServerRuntime(

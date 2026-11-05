@@ -25,4 +25,4 @@ jobs:
       - name: Package builds and the CLI starts
         run: uv tool run --from ./plugins/memory-sync memory-store --version
       - name: Manifests are valid JSON
-        run: uv run --no-project python -c "import json,pathlib; [json.loads(pathlib.Path(p).read_text()) for p in ('.github/plugin/marketplace.json','plugins/memory-sync/plugin.json','plugins/memory-sync/mcp.json')]"
+        run: uv run --no-project python -c "import json,pathlib; [json.loads(pathlib.Path(p).read_text()) for p in ('.github/plugin/marketplace.json','plugins/memory-sync/plugin.json','plugins/memory-sync/mcp.json','plugins/memory-sync/com.github.copilot/hooks/hooks.json')]"

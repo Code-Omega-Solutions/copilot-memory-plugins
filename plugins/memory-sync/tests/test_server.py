@@ -9,20 +9,32 @@ from memory_store_sync.workspace import StoreLocation
 
 
 class ServerCommandTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.data = {"PLUGIN_DATA": self._tmp.name}
+
     def test_environment_binary_wins(self):
         command = server.server_command(StoreConfig(binary="/cfg"), {server.BINARY_ENV: "/env"}, which=lambda _: None)
         self.assertEqual(command, ["/env"])
 
     def test_configured_binary_beats_go(self):
-        self.assertEqual(server.server_command(StoreConfig(binary="/cfg"), {}, which=lambda _: "/go"), ["/cfg"])
+        self.assertEqual(server.server_command(StoreConfig(binary="/cfg"), self.data, which=lambda _: "/go"), ["/cfg"])
 
     def test_go_runs_the_pinned_module(self):
         config = StoreConfig()
-        self.assertEqual(server.server_command(config, {}, which=lambda _: "/go"), ["/go", "run", config.module])
+        self.assertEqual(server.server_command(config, self.data, which=lambda _: "/go"), ["/go", "run", config.module])
+
+    def test_installed_binary_beats_go_run(self):
+        config = StoreConfig()
+        managed = server.managed_binary_path(config, self.data)
+        managed.parent.mkdir(parents=True)
+        managed.write_text("")
+        self.assertEqual(server.server_command(config, self.data, which=lambda _: "/go"), [str(managed)])
 
     def test_missing_runtime_is_reported(self):
         with self.assertRaisesRegex(server.NoServerRuntime, "go install"):
-            server.server_command(StoreConfig(), {}, which=lambda _: None)
+            server.server_command(StoreConfig(), self.data, which=lambda _: None)
 
 
 class ServerEnvironmentTests(unittest.TestCase):

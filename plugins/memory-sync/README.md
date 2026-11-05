@@ -10,6 +10,7 @@ Contents:
 | Path | Purpose |
 | --- | --- |
 | `mcp.json` | Registers the `agent-memory-mcp` server, started through `bin/memory-store.py serve`. |
+| `com.github.copilot/hooks/hooks.json` | `sessionStart` hook that runs `memory-store setup` in the workspace. |
 | `skills/memory-sync/SKILL.md` | Session-start, session-end and reconciliation workflow for agents. |
 | `src/memory_store_sync/` | The `memory-store` CLI (Python standard library only). |
 | `tests/` | Unit tests (`python -m unittest`). |
@@ -23,6 +24,7 @@ Setup, workflow and configuration are described in the
 memory-store [--workspace DIR] [--host KEY] <command>
 
   init [--force]         opt the workspace in (.memory-store.json, host folder, .gitignore)
+  setup                  install the server, init, write instructions, seed the database (run by the sessionStart hook)
   status                 own database and export, other hosts, pending records
   import [--dry-run]     add records from other hosts' exports; report conflicts
   export                 write the own durable export and checkpoint the database

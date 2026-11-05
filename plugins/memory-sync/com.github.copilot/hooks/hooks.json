@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "uv run --no-project --quiet \"${PLUGIN_ROOT}/bin/memory-store.py\" setup",
+        "timeoutSec": 600
+      }
+    ]
+  }
+}

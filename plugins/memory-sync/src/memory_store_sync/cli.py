@@ -12,6 +12,7 @@ from . import __version__
 from .config import ConfigError
 from .init import command_init
 from .server import serve
+from .setup import command_setup
 from .store import resolve_host, validate_host
 from .sync import command_export, command_import, command_status
 from .workspace import locate_store, resolve_workspace
@@ -36,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--dry-run", action="store_true", help="report what import would do without writing")
     init_parser = commands.add_parser("init", parents=[common], help="opt the workspace in to the synchronized store")
     init_parser.add_argument("--force", action="store_true", help="overwrite an existing .memory-store.json with defaults")
+    commands.add_parser("setup", parents=[common], help="install the server, init the workspace, write instructions, seed the database")
     return parser
 
 
@@ -47,13 +49,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         host = _host(args)
-        if args.command == "init":
+        if args.command in ("init", "setup"):
             root, notes = resolve_workspace(args.workspace, Path.cwd(), os.environ)
             if root is None:
                 for note in notes:
                     print(note, file=sys.stderr)
                 print("error: no workspace found; pass --workspace", file=sys.stderr)
                 return NOT_OPTED_IN_EXIT
+            if args.command == "setup":
+                return command_setup(root, host)
             return command_init(root, host, force=args.force)
 
         location = locate_store(args.workspace)
