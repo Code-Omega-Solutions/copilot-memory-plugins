@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -37,7 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--dry-run", action="store_true", help="report what import would do without writing")
     init_parser = commands.add_parser("init", parents=[common], help="opt the workspace in to the synchronized store")
     init_parser.add_argument("--force", action="store_true", help="overwrite an existing .memory-store.json with defaults")
-    commands.add_parser("setup", parents=[common], help="install the server, init the workspace, write instructions, seed the database")
+    setup_parser = commands.add_parser("setup", parents=[common], help="install the server, init the workspace, write instructions, seed the database")
+    setup_parser.add_argument("--hook-input", action="store_true", help="read the session hook's workspace cwd from JSON on stdin")
     return parser
 
 
@@ -49,6 +51,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         host = _host(args)
+        if args.command == "setup" and args.hook_input:
+            payload = json.load(sys.stdin)
+            if not isinstance(payload, dict) or not isinstance(payload.get("cwd"), str) or not payload["cwd"].strip():
+                raise ValueError("session hook input must contain a non-empty cwd string")
+            if not args.workspace:
+                args.workspace = payload["cwd"]
         if args.command in ("init", "setup"):
             root, notes = resolve_workspace(args.workspace, Path.cwd(), os.environ)
             if root is None:

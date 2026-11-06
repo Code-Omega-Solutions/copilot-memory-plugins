@@ -4,7 +4,7 @@
     "sessionStart": [
       {
         "type": "command",
-        "command": "uv run --no-project --quiet \"${PLUGIN_ROOT}/bin/memory-store.py\" setup",
+        "command": "uv run --no-project --quiet \"${PLUGIN_ROOT}/bin/memory-store.py\" setup --hook-input",
         "timeoutSec": 600
       }
     ]

@@ -1,12 +1,13 @@
 """``setup``: idempotent one-shot provisioning of a workspace.
 
-Checks the prerequisites, installs the pinned server binary, opts the
+Checks MCP registrations and prerequisites, installs the pinned server binary, opts the
 workspace in (``init``), writes the agent instructions and seeds the own
 database from the committed exports. Safe to run on every session start.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -18,7 +19,7 @@ from .config import StoreConfig
 from .init import command_init
 from .server import BINARY_ENV, managed_binary_path
 from .store import host_paths
-from .workspace import StoreLocation, find_git_root, locate_store
+from .workspace import PACKAGE_PLUGIN_ROOT, StoreLocation, find_git_root, locate_store
 
 INSTRUCTIONS_PATH = Path(".github") / "copilot-instructions.md"
 BEGIN_MARKER = "<!-- memory-sync:begin (managed by the memory-sync plugin; edits inside are overwritten) -->"
@@ -71,6 +72,98 @@ def write_instructions(root: Path) -> str:
 
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
+
+
+def _is_memory_registration(name: str, server: dict) -> bool:
+    if name.lower().replace("_", "-") == "agent-memory-mcp":
+        return True
+    command = server.get("command", "").lower()
+    args = [arg.lower() for arg in server.get("args", [])]
+    tokens = [command, *args]
+    if any("agent-memory-mcp" in token for token in tokens):
+        return True
+    return "serve" in args and any(
+        token.replace("\\", "/").rsplit("/", 1)[-1] in
+        {"memory-store", "memory-store.exe", "memory-store.py"}
+        for token in tokens
+    )
+
+
+def check_mcp_registrations(
+    root: Path,
+    out: TextIO,
+    home: Path | None = None,
+    plugin_root: Path = PACKAGE_PLUGIN_ROOT,
+) -> bool:
+    """Warn about extra registrations or an incomplete scan without changing configs."""
+    home = Path.home() if home is None else home
+    plugin_config = plugin_root / "mcp.json"
+    sources = [
+        ("plugin", plugin_config),
+        ("user", home / ".copilot" / "mcp-config.json"),
+        ("workspace", root / ".vscode" / "mcp.json"),
+        ("workspace", root / ".mcp.json"),
+    ]
+    clean = True
+    expected = False
+    for scope, path in sources:
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except FileNotFoundError:
+            if scope == "plugin":
+                clean = False
+                print(f"warning: expected plugin MCP config is missing: {path}; conflict check incomplete", file=out)
+            continue
+        except (OSError, UnicodeError):
+            clean = False
+            print(f"warning: cannot read {scope} MCP config: {path}; check permissions/encoding; conflict check incomplete", file=out)
+            continue
+        try:
+            config = json.loads(text)
+            if not isinstance(config, dict):
+                raise ValueError
+            registrations = []
+            for key in ("mcpServers", "servers"):
+                servers = config.get(key, {})
+                if not isinstance(servers, dict):
+                    raise ValueError
+                for name, server in servers.items():
+                    if not isinstance(server, dict):
+                        raise ValueError
+                    if not isinstance(server.get("command", ""), str):
+                        raise ValueError
+                    args = server.get("args", [])
+                    if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+                        raise ValueError
+                    if _is_memory_registration(name, server):
+                        registrations.append(name)
+        except ValueError:
+            clean = False
+            print(f"warning: invalid JSON or MCP server structure in {scope} config: {path}; fix the config; conflict check incomplete", file=out)
+            continue
+        for name in registrations:
+            if scope == "plugin" and name == "agent-memory-mcp" and not expected:
+                expected = True
+                continue
+            clean = False
+            print(f"warning: additional agent-memory-mcp registration {name!r} in {scope} config: {path}", file=out)
+        if scope == "plugin" and not expected:
+            clean = False
+            print(f"warning: expected agent-memory-mcp registration is missing from {path}; conflict check incomplete", file=out)
+    if clean:
+        print("MCP registrations: only the expected plugin registration found in checked configs", file=out)
+    else:
+        print(
+            "MCP routing/config warning: clients may shadow a registration or expose multiple memory servers, "
+            "so tools can use a different database/workspace from memory-store setup/import/export. "
+            "Review the listed configs and keep one intended registration active; if using a workspace override, "
+            "disable the plugin registration in your client and set an explicit serve --workspace DIR. "
+            "In VS Code, workspace setting chat.mcp.collisionBehavior=disable disables lower-priority "
+            "same-name duplicates; suffix enables both with numeric suffixes. This does not fix differently named aliases. "
+            "Restart the affected MCP connections after manual changes. No MCP configs were changed.",
+            file=out,
+        )
+    return clean
 
 
 def install_server(
@@ -130,6 +223,7 @@ def command_setup(
         print("error: git is not on PATH", file=sys.stderr)
         return 1
 
+    registrations_clean = check_mcp_registrations(root, out)
     status = command_init(root, host, out=out)
     if status:
         return status
@@ -144,5 +238,8 @@ def command_setup(
         print("seeding the own database from the committed exports ...", file=out)
         if importer(location, host, False):
             print("warning: seeding failed; run `memory-store import` later", file=out)
-    print("setup complete" if ready else "setup incomplete: see the error above", file=out)
+    if ready:
+        print("setup complete" if registrations_clean else "setup complete with MCP registration warnings: review the messages above", file=out)
+    else:
+        print("setup incomplete: see the error above", file=out)
     return 0 if ready else 2

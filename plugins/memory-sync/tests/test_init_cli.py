@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from memory_store_sync import cli
 from memory_store_sync.config import CONFIG_FILENAME
@@ -104,6 +105,34 @@ class CliTests(unittest.TestCase):
         (self.root / CONFIG_FILENAME).write_text("[]", encoding="utf-8")
         code, _, err = self.run_cli("status", "--workspace", str(self.root), "--host", "box")
         self.assertEqual((code, err.startswith("error:")), (1, True))
+
+    def test_setup_uses_hook_workspace_instead_of_plugin_cwd(self):
+        plugin = self.root / "plugin"
+        plugin.mkdir()
+        os.environ["PLUGIN_ROOT"] = str(plugin)
+        with patch.object(cli.sys, "stdin", io.StringIO(json.dumps({"cwd": str(self.root)}))), \
+                patch.object(cli.Path, "cwd", return_value=plugin), \
+                patch.object(cli, "command_setup", return_value=0) as setup:
+            code, _, err = self.run_cli("setup", "--hook-input", "--host", "box")
+        self.assertEqual(code, 0, err)
+        setup.assert_called_once_with(self.root, "box")
+
+    def test_explicit_workspace_overrides_hook_workspace(self):
+        with patch.object(cli.sys, "stdin", io.StringIO(json.dumps({"cwd": "unused"}))), \
+                patch.object(cli, "command_setup", return_value=0) as setup:
+            code, _, err = self.run_cli("setup", "--hook-input", "--workspace", str(self.root), "--host", "box")
+        self.assertEqual(code, 0, err)
+        setup.assert_called_once_with(self.root, "box")
+
+    def test_setup_rejects_invalid_hook_input(self):
+        for payload in ("", "{", "[]", "{}", '{"cwd": null}', '{"cwd": ""}'):
+            with self.subTest(payload=payload), \
+                    patch.object(cli.sys, "stdin", io.StringIO(payload)), \
+                    patch.object(cli, "command_setup") as setup:
+                code, _, err = self.run_cli("setup", "--hook-input", "--host", "box")
+                self.assertEqual(code, 1)
+                self.assertTrue(err.startswith("error:"), err)
+                setup.assert_not_called()
 
 
 if __name__ == "__main__":

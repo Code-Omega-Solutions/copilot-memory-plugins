@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from memory_store_sync import setup as setup_mod
 from memory_store_sync.config import CONFIG_FILENAME, StoreConfig
@@ -63,6 +64,13 @@ class InstallServerTests(unittest.TestCase):
 
 
 class CommandSetupTests(unittest.TestCase):
+    def setUp(self):
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        home_patch = patch.object(setup_mod.Path, "home", return_value=Path(home.name))
+        home_patch.start()
+        self.addCleanup(home_patch.stop)
+
     def test_setup_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -72,6 +80,8 @@ class CommandSetupTests(unittest.TestCase):
                 out = io.StringIO()
                 status = setup_mod.command_setup(root, "laptop", env, out, install=lambda *a: True)
                 self.assertEqual(status, 0, out.getvalue())
+                self.assertIn("only the expected plugin registration", out.getvalue())
+                self.assertNotIn("warning:", out.getvalue())
             self.assertTrue((root / CONFIG_FILENAME).is_file())
             self.assertTrue((root / setup_mod.INSTRUCTIONS_PATH).is_file())
             self.assertTrue((root / "data" / "memory-store" / "laptop").is_dir())
