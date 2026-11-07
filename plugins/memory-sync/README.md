@@ -87,3 +87,12 @@ If an MCP client does not expand `${workspaceFolder}` in plugin server
 arguments, configure a workspace-scoped server with an explicit
 `serve --workspace DIR` argument, then restart that connection. Restarting
 the fallback server without correcting its workspace does not enable sync.
+
+The packaged plugin registration also requires `uv` to be on the MCP host's
+`PATH`. If VS Code cannot start the server, inspect **MCP: List Servers** →
+`agent-memory-mcp` → **Show Output**: a missing `uv` or unresolved
+`${PLUGIN_ROOT}` prevents the launcher from starting and is reported by the MCP
+host before this plugin can emit diagnostics. If `${workspaceFolder}` reaches
+the launcher unexpanded, its stderr notes the rejected placeholder and the
+startup line reports `synced=no`; do not treat that fallback connection as
+workspace synchronization.
