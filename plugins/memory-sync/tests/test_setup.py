@@ -66,26 +66,90 @@ class InstallServerTests(unittest.TestCase):
 class CommandSetupTests(unittest.TestCase):
     def setUp(self):
         home = tempfile.TemporaryDirectory()
+        self.home = Path(home.name)
         self.addCleanup(home.cleanup)
-        home_patch = patch.object(setup_mod.Path, "home", return_value=Path(home.name))
+        home_patch = patch.object(setup_mod.Path, "home", return_value=self.home)
         home_patch.start()
         self.addCleanup(home_patch.stop)
+
+    @staticmethod
+    def install_managed_server(config, env, out):
+        target = setup_mod.managed_binary_path(config, env)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("test server", encoding="utf-8")
+        return True
 
     def test_setup_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             git_repo(root)
             env = {"PLUGIN_DATA": str(root / "plugin-data")}
-            for _ in range(2):
+            for index in range(2):
                 out = io.StringIO()
-                status = setup_mod.command_setup(root, "laptop", env, out, install=lambda *a: True)
+                status = setup_mod.command_setup(root, "laptop", env, out, install=self.install_managed_server)
                 self.assertEqual(status, 0, out.getvalue())
                 self.assertIn("only the expected plugin registration", out.getvalue())
                 self.assertNotIn("warning:", out.getvalue())
+                self.assertNotIn("next: restart the memory server", out.getvalue())
+                if index == 0:
+                    self.assertIn("restart required", out.getvalue())
+                else:
+                    self.assertNotIn("restart required", out.getvalue())
             self.assertTrue((root / CONFIG_FILENAME).is_file())
             self.assertTrue((root / setup_mod.INSTRUCTIONS_PATH).is_file())
             self.assertTrue((root / "data" / "memory-store" / "laptop").is_dir())
             self.assertEqual((root / ".gitignore").read_text().count("memory-sync:"), 1)
+
+    def test_standalone_init_keeps_restart_recommendation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git_repo(root)
+            out = io.StringIO()
+
+            status = setup_mod.command_init(root, "laptop", out=out)
+
+            self.assertEqual(status, 0)
+            self.assertIn("next: restart the memory server", out.getvalue())
+
+    def test_server_installation_requires_restart_when_workspace_is_already_configured(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git_repo(root)
+            setup_mod.command_init(root, "laptop", out=io.StringIO())
+            out = io.StringIO()
+
+            status = setup_mod.command_setup(
+                root, "laptop", {"PLUGIN_DATA": str(root / "plugin-data")}, out,
+                install=self.install_managed_server,
+            )
+
+            self.assertEqual(status, 0, out.getvalue())
+            self.assertIn("restart required", out.getvalue())
+            self.assertIn("MCP: List Servers", out.getvalue())
+            self.assertIn("agent-memory-mcp", out.getvalue())
+            self.assertIn("Restart", out.getvalue())
+
+    def test_registration_warning_is_separate_from_restart_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git_repo(root)
+            user_config = self.home / ".copilot" / "mcp-config.json"
+            user_config.parent.mkdir(parents=True)
+            user_config.write_text(
+                '{"mcpServers":{"agent-memory-mcp":{"command":"agent-memory-mcp"}}}',
+                encoding="utf-8",
+            )
+            out = io.StringIO()
+
+            status = setup_mod.command_setup(
+                root, "laptop", {"PLUGIN_DATA": str(root / "plugin-data")}, out,
+                install=self.install_managed_server,
+            )
+
+            self.assertEqual(status, 0, out.getvalue())
+            self.assertIn("setup complete with MCP registration warnings", out.getvalue())
+            self.assertIn("restart required", out.getvalue())
+            self.assertNotIn("active connection uses", out.getvalue())
 
     def test_missing_runtime_reports_incomplete(self):
         with tempfile.TemporaryDirectory() as tmp:
