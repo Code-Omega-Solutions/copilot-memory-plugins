@@ -1,0 +1,7 @@
+{
+  "storeDir": "data/memory-store",
+  "ragDir": "data/rag-index",
+  "server": {
+    "module": "github.com/ipiton/agent-memory-mcp/cmd/agent-memory-mcp@v0.13.3"
+  }
+}
