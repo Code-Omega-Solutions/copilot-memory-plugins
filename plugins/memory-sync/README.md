@@ -36,6 +36,14 @@ memory-store [--workspace DIR] [--host KEY] <command>
 has not opted in. `serve` exits with status 2 when neither a server binary nor
 Go is available.
 
+### Setup restart behavior
+
+When setup creates `.memory-store.json` or installs the managed server, it
+reports that the `agent-memory-mcp` connection must restart before using the
+workspace settings. In VS Code, use **MCP: List Servers** →
+`agent-memory-mcp` → **Restart**. Setup cannot restart or verify the client
+connection itself. An unchanged setup run does not request another restart.
+
 ### MCP registration checks at setup
 
 The installation/session-start `setup` flow checks the plugin's own `mcp.json`,

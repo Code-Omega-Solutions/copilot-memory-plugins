@@ -107,20 +107,22 @@ and:
 Commit `.memory-store.json`, `.gitignore` and `.github/copilot-instructions.md`
 once. Set `MEMORY_STORE_AUTO_SETUP=0` to turn the automatic setup off; the
 server then keeps using the private per-user store until you run
-`memory-store setup` or `memory-store init` yourself. Restart the MCP server
-after the first setup (VS Code: **MCP: List Servers** → `agent-memory-mcp` →
-**Restart**).
+`memory-store setup` or `memory-store init` yourself. When setup creates the
+workspace configuration or installs the managed server, it reports that the
+MCP connection must restart. In VS Code, use **MCP: List Servers** →
+`agent-memory-mcp` → **Restart**. Unchanged setup runs do not request another
+restart.
 
 To run it manually, or when your client does not run plugin hooks:
 
 ```shell
-uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.0#subdirectory=plugins/memory-sync" memory-store setup
+uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@main#subdirectory=plugins/memory-sync" memory-store setup
 ```
 
 To get a shorter command, install the CLI once per machine:
 
 ```shell
-uv tool install "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.0#subdirectory=plugins/memory-sync"
+uv tool install "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@main#subdirectory=plugins/memory-sync"
 memory-store init
 ```
 

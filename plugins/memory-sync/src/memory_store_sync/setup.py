@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Mapping, TextIO
 
-from .config import StoreConfig
+from .config import CONFIG_FILENAME, StoreConfig
 from .init import command_init
 from .server import BINARY_ENV, managed_binary_path
 from .store import host_paths
@@ -224,13 +224,18 @@ def command_setup(
         return 1
 
     registrations_clean = check_mcp_registrations(root, out)
-    status = command_init(root, host, out=out)
+    configuration_created = not (root / CONFIG_FILENAME).is_file()
+    status = command_init(root, host, out=out, announce_next=False)
     if status:
         return status
     location = locate_store(str(root), environ=env)
     print(f"instructions {INSTRUCTIONS_PATH.as_posix()}: {write_instructions(location.workspace or root)}", file=out)
 
+    managed_server = not (env.get(BINARY_ENV, "").strip() or location.config.binary)
+    managed_binary = managed_binary_path(location.config, env)
+    server_was_installed = managed_server and managed_binary.is_file()
     ready = install(location.config, env, out)
+    server_installed = ready and managed_server and not server_was_installed and managed_binary.is_file()
     if ready and importer is None:
         from .sync import command_import as importer
     paths = host_paths(host, location.store_root, location.rag_root)
@@ -240,6 +245,16 @@ def command_setup(
             print("warning: seeding failed; run `memory-store import` later", file=out)
     if ready:
         print("setup complete" if registrations_clean else "setup complete with MCP registration warnings: review the messages above", file=out)
+        if configuration_created or server_installed:
+            print(
+                "restart required: restart the `agent-memory-mcp` connection to apply the workspace settings.",
+                file=out,
+            )
+            print(
+                "In VS Code: MCP: List Servers -> agent-memory-mcp -> Restart. "
+                "The active connection has not been verified.",
+                file=out,
+            )
     else:
         print("setup incomplete: see the error above", file=out)
     return 0 if ready else 2

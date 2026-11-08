@@ -1,0 +1,426 @@
+{
+  "workflow": "companion",
+  "specName": "Memory MCP Setup",
+  "branch": "feat/memory-mcp-setup",
+  "currentStep": "implement",
+  "status": "completed",
+  "history": [
+    {
+      "step": "specify",
+      "substep": null,
+      "kind": "start",
+      "by": "extension",
+      "at": "2026-11-08T02:04:31.390Z"
+    },
+    {
+      "step": "specify",
+      "substep": null,
+      "kind": "complete",
+      "by": "extension",
+      "at": "2026-11-08T02:06:46.121Z"
+    },
+    {
+      "step": "plan",
+      "substep": null,
+      "kind": "start",
+      "by": "extension",
+      "at": "2026-11-08T02:06:57.027Z"
+    },
+    {
+      "step": "plan",
+      "substep": "research",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:08:14.071Z"
+    },
+    {
+      "step": "plan",
+      "substep": "design",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:09:36.544Z"
+    },
+    {
+      "step": "plan",
+      "substep": null,
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:09:49.587Z"
+    },
+    {
+      "step": "tasks",
+      "substep": null,
+      "kind": "start",
+      "by": "extension",
+      "at": "2026-11-08T02:09:54.157Z"
+    },
+    {
+      "step": "tasks",
+      "substep": "generate",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:12:09.000Z"
+    },
+    {
+      "step": "tasks",
+      "substep": null,
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:12:09.103Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "kind": "start",
+      "by": "extension",
+      "at": "2026-11-08T02:12:13.400Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T001",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:12:52.182Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T002",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:13:22.565Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T003",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:14:12.937Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T004",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:14:13.043Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T005",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:15:09.035Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:15:09.050Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T006",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:16:40.406Z"
+    },
+    {
+      "step": "implement",
+      "substep": null,
+      "task": "T007",
+      "kind": "complete",
+      "by": "ai",
+      "at": "2026-11-08T02:17:26.536Z"
+    }
+  ],
+  "unattended": true,
+  "last_action": "All 7 tasks complete; 82 unit tests, package CLI startup, manifest validation, and diff whitespace check passed.",
+  "coverage": {
+    "FR-001": {
+      "title": "The setup operation MUST prepare memory for the workspace from a single user-invoked operation.",
+      "tasks": [
+        "T001",
+        "T002"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_setup_is_idempotent"
+      ]
+    },
+    "FR-002": {
+      "title": "Setup MUST preserve existing workspace configuration and user-authored instructions, changing only missing settings and content within its managed instruction section unless the user explicitly requests replacement.",
+      "tasks": [
+        "T001",
+        "T002"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::InstructionsTests.test_create_update_and_preserve",
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_setup_is_idempotent",
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_standalone_init_keeps_restart_recommendation"
+      ]
+    },
+    "FR-003": {
+      "title": "Setup MUST verify that the memory service can be launched with the configured server version or report the prerequisite or installation failure that prevents launch.",
+      "tasks": [
+        "T002",
+        "T005"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_missing_runtime_reports_incomplete"
+      ]
+    },
+    "FR-004": {
+      "title": "Setup MUST initialize the workspace's host-specific store and add eligible records from other workstations without overwriting existing records.",
+      "tasks": [
+        "T002",
+        "T005"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_seeds_database_from_other_hosts"
+      ]
+    },
+    "FR-005": {
+      "title": "Setup MUST report records changed on another workstation for later reconciliation and MUST NOT silently choose a conflicting version.",
+      "tasks": [
+        "T001",
+        "T002",
+        "T005"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_sync.py"
+      ]
+    },
+    "FR-006": {
+      "title": "Setup MUST check known MCP registration locations for competing memory-service registrations and report incomplete checks when a configuration cannot be read or understood.",
+      "tasks": [
+        "T001",
+        "T002",
+        "T005"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_mcp_registrations.py"
+      ]
+    },
+    "FR-007": {
+      "title": "When setup changes settings that require reconnection, it MUST request a restart through the active client when supported; otherwise it MUST provide an actionable manual restart instruction and report that restart is pending.",
+      "tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_setup_is_idempotent",
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_server_installation_requires_restart_when_workspace_is_already_configured"
+      ]
+    },
+    "FR-008": {
+      "title": "Setup MUST distinguish completed provisioning from a running connection that still requires restart, and MUST NOT claim that the active service uses the workspace store before reconnection is verified.",
+      "tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_registration_warning_is_separate_from_restart_state"
+      ]
+    },
+    "FR-009": {
+      "title": "Setup MUST be safe to repeat and MUST NOT create duplicate managed settings, host stores, or instruction content.",
+      "tasks": [
+        "T001",
+        "T002"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_setup_is_idempotent",
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_standalone_init_keeps_restart_recommendation"
+      ]
+    },
+    "FR-010": {
+      "title": "Setup MUST return a failure result for blocking errors and MUST surface warnings without presenting an incomplete configuration check as conflict-free.",
+      "tasks": [
+        "T001",
+        "T002",
+        "T005"
+      ],
+      "tests": [
+        "plugins/memory-sync/tests/test_setup.py::CommandSetupTests.test_missing_runtime_reports_incomplete",
+        "plugins/memory-sync/tests/test_mcp_registrations.py"
+      ]
+    }
+  },
+  "size": "normal",
+  "classification": {
+    "projectedFiles": 8,
+    "projectedTasks": 8,
+    "scopeSignal": "none",
+    "verdict": "normal"
+  },
+  "expectations": [
+    "automatic reconciliation of conflicting memory records",
+    "restarting clients without a supported restart mechanism",
+    "changes to memory creation or retrieval after setup"
+  ],
+  "context": [
+    "area: plugins/memory-sync CLI, MCP registration, and session-start setup",
+    "constraint: preserve existing configuration and report restart pending until the client reconnects"
+  ],
+  "intent": "Make workspace memory setup complete, safe to repeat, and explicit about required MCP reconnection.",
+  "planBlocks": [],
+  "planBlocksPicked": [],
+  "decisions": [
+    {
+      "decision": "Keep restart under the MCP client and report a manual restart action from setup.",
+      "why": "The CLI and session hook do not own a portable client restart API.",
+      "rejected": "Restarting the client from setup could terminate the process that invoked it and is unsupported across clients."
+    },
+    {
+      "decision": "Request restart only when setup creates workspace memory configuration or installs the managed server.",
+      "why": "Those changes can alter the active connection, while unchanged session-start runs should remain quiet.",
+      "rejected": "Always requesting restart would disrupt idempotent repeated setup."
+    },
+    {
+      "decision": "Represent restart pending separately from provisioning success.",
+      "why": "Setup can finish provisioning but cannot observe whether the client reconnected.",
+      "rejected": "Failing setup until reconnection would conflate provisioning with client state."
+    },
+    {
+      "decision": "Treat workspace configuration creation or first installation of the managed server as restart-required changes.",
+      "why": "Either can change the server process or store selected by the active MCP connection.",
+      "rejected": "Request a restart after every setup run, which would disrupt unchanged session-start runs."
+    },
+    {
+      "decision": "Keep the client restart manual and report it separately from provisioning success.",
+      "why": "The CLI has no portable way to restart or verify the MCP host process.",
+      "rejected": "Attempting to restart the host from its own setup hook could interrupt setup and is unsupported across clients."
+    },
+    {
+      "decision": "Suppress the generic initialization restart recommendation only when setup calls initialization.",
+      "why": "Setup now gives conditional restart guidance, while standalone init still needs its existing follow-up instructions.",
+      "rejected": "Changing standalone init behavior would regress existing users."
+    }
+  ],
+  "step_summaries": {
+    "plan": {
+      "summary": "Plan a restart-aware result for existing idempotent workspace setup.",
+      "key_finding": "Setup does not control or verify the MCP host process, so it must distinguish provisioning from restart completion."
+    },
+    "tasks": {
+      "summary": "Five tasks across one user-story phase and Polish; tests precede implementation, with independent docs and CI validation afterward."
+    },
+    "implement": {
+      "summary": "Setup now reports conditional MCP restart guidance, preserves standalone init messaging, and passes the full CI validation.",
+      "key_finding": "Suppressing initialization's unconditional follow-up is necessary for unchanged setup runs to stay quiet."
+    }
+  },
+  "approach": "Track workspace configuration creation and managed server installation in the existing setup path. On successful provisioning, report a restart action only when these server-affecting inputs change, and document that setup cannot verify client reconnection.",
+  "currentTask": null,
+  "task_summaries": {
+    "T001": {
+      "status": "DONE",
+      "did": "Added restart behavior regression tests and confirmed the new scenarios fail before implementation.",
+      "files": [
+        "plugins/memory-sync/tests/test_setup.py"
+      ]
+    },
+    "T002": {
+      "status": "DONE",
+      "did": "Reported a manual MCP restart only when setup created workspace configuration or installed the managed server; targeted setup tests pass.",
+      "files": [
+        "plugins/memory-sync/src/memory_store_sync/setup.py"
+      ]
+    },
+    "T003": {
+      "status": "DONE",
+      "did": "Documented when setup requires a restart and how to restart the MCP connection.",
+      "files": [
+        "plugins/memory-sync/README.md"
+      ]
+    },
+    "T004": {
+      "status": "DONE",
+      "did": "Updated repository setup guidance to explain conditional restart messaging and avoid requesting restart on unchanged runs.",
+      "files": [
+        "README.md"
+      ]
+    },
+    "T005": {
+      "status": "DONE",
+      "did": "Final CI suite, package CLI startup, manifest validation, and diff whitespace check pass after all implementation changes.",
+      "files": [
+        ".github/workflows/ci.yml",
+        "plugins/memory-sync/tests/",
+        "plugins/memory-sync/"
+      ]
+    },
+    "T006": {
+      "status": "DONE",
+      "did": "Added a regression assertion that setup suppresses the unconditional restart recommendation and confirmed it fails before the follow-up change.",
+      "files": [
+        "plugins/memory-sync/tests/test_setup.py"
+      ]
+    },
+    "T007": {
+      "status": "DONE",
+      "did": "Added an opt-out for initialization follow-up guidance when called by setup, preserving standalone init output; setup and init tests pass.",
+      "files": [
+        "plugins/memory-sync/src/memory_store_sync/init.py",
+        "plugins/memory-sync/src/memory_store_sync/setup.py"
+      ]
+    }
+  },
+  "verified": [
+    {
+      "what": "Unit tests",
+      "command": "TMPDIR=/tmp uv run --no-project python -m unittest discover -s plugins/memory-sync/tests -t plugins/memory-sync -v",
+      "source": "derived",
+      "exitCode": 0,
+      "durationSeconds": 0.6,
+      "result": "---------------------------------------------------------------------- · Ran 82 tests in 0.473s · OK"
+    },
+    {
+      "what": "Package CLI",
+      "command": "TMPDIR=/tmp uv tool run --from ./plugins/memory-sync memory-store --version",
+      "source": "derived",
+      "exitCode": 0,
+      "durationSeconds": 0.1,
+      "result": "memory-store 0.1.0"
+    },
+    {
+      "what": "Manifest JSON",
+      "command": "TMPDIR=/tmp uv run --no-project python -c \"import json,pathlib; [json.loads(pathlib.Path(p).read_text()) for p in (\\\".github/plugin/marketplace.json\\\",\\\"plugins/memory-sync/plugin.json\\\",\\\"plugins/memory-sync/mcp.json\\\",\\\"plugins/memory-sync/com.github.copilot/hooks/hooks.json\\\")]\"",
+      "source": "derived",
+      "exitCode": 0,
+      "durationSeconds": 0.1,
+      "result": "no output"
+    },
+    {
+      "what": "Diff whitespace",
+      "command": "git diff --check",
+      "source": "derived",
+      "exitCode": 0,
+      "durationSeconds": 0.0,
+      "result": "no output"
+    }
+  ],
+  "concerns": [
+    {
+      "note": "The plan-block generator could not emit the calls/states templates because the repository has no matching preset files; the plan records the flow and restart states directly.",
+      "step": "plan"
+    },
+    {
+      "note": "The default TMPDIR is under the home tree and caused four unrelated workspace-root tests to discover a Git root; the complete suite passes with TMPDIR=/tmp.",
+      "step": "implement"
+    },
+    {
+      "note": "The published v0.1.0 CLI does not contain the setup subcommand; manual install examples now use @main until a release containing setup is published.",
+      "step": "implement"
+    }
+  ]
+}

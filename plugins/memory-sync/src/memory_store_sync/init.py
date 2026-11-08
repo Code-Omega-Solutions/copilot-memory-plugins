@@ -62,7 +62,14 @@ def unignore_rules(root: Path, config: StoreConfig, host: str) -> list[str]:
     return rules
 
 
-def command_init(target: Path, host: str, force: bool = False, out: TextIO | None = None) -> int:
+def command_init(
+    target: Path,
+    host: str,
+    force: bool = False,
+    out: TextIO | None = None,
+    *,
+    announce_next: bool = True,
+) -> int:
     out = out or sys.stdout
     root = find_git_root(target)
     if root is None:
@@ -96,9 +103,10 @@ def command_init(target: Path, host: str, force: bool = False, out: TextIO | Non
         remaining = [p for p in (CONFIG_FILENAME, f"{config.store_dir}/{host}/memories.db") if is_ignored(root, p)]
         if remaining:
             print(f"warning: still ignored by another source (global or nested ignore file): {', '.join(remaining)}", file=out)
-    print(
-        "next: restart the memory server, store or import knowledge, then run "
-        "`memory-store export` and commit the host folder together with .memory-store.json",
-        file=out,
-    )
+    if announce_next:
+        print(
+            "next: restart the memory server, store or import knowledge, then run "
+            "`memory-store export` and commit the host folder together with .memory-store.json",
+            file=out,
+        )
     return 0
