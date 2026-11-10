@@ -104,3 +104,36 @@ host before this plugin can emit diagnostics. If `${workspaceFolder}` reaches
 the launcher unexpanded, its stderr notes the rejected placeholder and the
 startup line reports `synced=no`; do not treat that fallback connection as
 workspace synchronization.
+
+### Reviewed obsolete records and import verification
+
+Review relevance before importing historical knowledge. To exclude a specific
+obsolete record without modifying another active host's files, add its exact ID
+and a nonempty review reason to the workspace's `.memory-store.json`:
+
+```json
+{
+  "excludedMemoryIds": {
+    "obsolete-documentation-id": "References removed files; current guidance is maintained elsewhere"
+  }
+}
+```
+
+Keep the other existing configuration keys. `status` and `import` (including
+`--dry-run`) print each excluded source record and reason. Exclusions apply to
+new imports and conflict reporting, including seeds from the own export, but
+never delete existing local memories or edit source exports. Remove an exclusion
+to reconsider the record in a future sync. Keep both stores when both hosts are
+active; do not remove a host directory merely because one memory is obsolete.
+
+After an import, the CLI re-exports the database through the upstream CLI and
+verifies the requested IDs, titles, content and types. Missing or mismatched
+records cause exit status 1 even if the upstream process exited zero. Partial
+successes remain stored; retry selects only still-unknown IDs. `sync` does not
+export after a failed import verification. A mismatched existing record requires
+manual reconciliation rather than an automatic overwrite.
+
+The pinned server does not accept the legacy `documentation` type, although old
+exports may contain it. Relevant legacy records require an explicit migration
+decision; the sync CLI never silently converts them. Review obsolete records
+for an exclusion instead of repeatedly attempting an unsupported import.

@@ -30,6 +30,13 @@ governed by the workspace's own instructions.
   The CLI is the only sanctioned writer; it uses the upstream
   `agent-memory-mcp export` / `import` commands.
 - Agents MUST NOT write into another host's directory.
+- Review historical records for relevance before import. Exact obsolete IDs may
+  be excluded in `.memory-store.json` under `excludedMemoryIds`, mapping each ID
+  to a nonempty review reason. Never infer exclusions solely from age or type,
+  delete another active host's files, or silently convert legacy memory types.
+- Import verifies stored IDs and content after the upstream command. A nonzero
+  result means synchronization is incomplete; do not report success or run
+  export as though all requested records were accepted.
 - Only durable types (`semantic`, `procedural`, `documentation`, `episodic`)
   cross hosts. `working` memories stay local.
 - `import` only adds records whose id is unknown locally. A record reported as

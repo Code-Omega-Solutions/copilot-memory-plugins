@@ -141,6 +141,18 @@ def load_sources(location: StoreLocation, own_host: str, include_own: bool) -> d
     return sources
 
 
+def reviewed_sources(location: StoreLocation, host: str, include_own: bool, out: TextIO) -> dict[str, list[dict]]:
+    sources = load_sources(location, host, include_own)
+    exclusions = location.config.excluded_memory_ids
+    for source_host, records in sources.items():
+        for record in records:
+            memory_id = record.get("id")
+            if memory_id in exclusions:
+                print(f"{source_host}: excluded {memory_id}: {exclusions[memory_id]}", file=out)
+        sources[source_host] = [record for record in records if record.get("id") not in exclusions]
+    return sources
+
+
 def _paths(location: StoreLocation, host: str) -> HostPaths:
     return host_paths(host, location.store_root, location.rag_root)
 
@@ -154,7 +166,7 @@ def command_status(location: StoreLocation, host: str, out: TextIO | None = None
     own_export = read_export(paths.export_path)
     print(f"own export:    {paths.export_path}  ({len(own_export)} records)", file=out)
     own_ids = {r["id"] for r in own_export if r.get("id")}
-    for other, records in load_sources(location, host, include_own=False).items():
+    for other, records in reviewed_sources(location, host, include_own=False, out=out).items():
         pending = len(select_new_records({other: records}, own_ids))
         print(f"other host:    {other}  ({len(records)} records, {pending} not in own export)", file=out)
     return 0
@@ -182,14 +194,26 @@ def command_import(
     cli = cli_factory(location, paths.db_path)
     own_records = cli.export_all() if paths.db_path.exists() else []
     own_ids = {r["id"] for r in own_records if r.get("id")}
-    sources = load_sources(location, host, include_own=not own_records)
+    sources = reviewed_sources(location, host, include_own=not own_records, out=out)
     new_records = select_new_records(sources, own_ids)
     conflicts = find_conflicts(own_records, sources)
 
     for other, records in sorted(sources.items()):
         print(f"{other}: {len(select_new_records({other: records}, own_ids))} new durable records", file=out)
+    failed = []
     if new_records and not dry_run:
         print(cli.import_records(new_records), file=out)
+        persisted = {record["id"]: record for record in cli.export_all() if record.get("id")}
+        for record in new_records:
+            actual = persisted.get(record["id"])
+            if actual is None or any(actual.get(key) != record.get(key) for key in ("title", "content", "type")):
+                failed.append(record["id"])
+        if failed:
+            print(
+                f"error: import verification failed for {len(failed)}/{len(new_records)} records: "
+                f"{', '.join(failed)}; inspect upstream warnings and review unsupported or obsolete records",
+                file=out,
+            )
     elif new_records:
         print(f"dry run: {len(new_records)} records would be imported", file=out)
     else:
@@ -203,4 +227,4 @@ def command_import(
                 f"  (own {conflict.own_updated_at or '-'} / other {conflict.other_updated_at})",
                 file=out,
             )
-    return 0
+    return 1 if failed else 0

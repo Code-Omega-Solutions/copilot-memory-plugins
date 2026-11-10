@@ -2,6 +2,7 @@ import io
 import sqlite3
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from memory_store_sync import store, sync
@@ -81,6 +82,76 @@ class CommandTests(unittest.TestCase):
         sync.command_import(self.location, "a", True, cli_factory=FakeCli, out=out)
         self.assertEqual(FakeCli.databases, {})
         self.assertIn("would be imported", out.getvalue())
+
+    def test_reviewed_exclusion_skips_only_selected_id_without_changing_sources(self):
+        self.location = replace(
+            self.location, config=StoreConfig(excluded_memory_ids={"old": "Removed documentation paths"})
+        )
+        source = self.paths("b").export_path
+        store.write_export(source, [record("old", memory_type="documentation"), record("current")])
+        before = source.read_bytes()
+        for dry_run in (True, False):
+            with self.subTest(dry_run=dry_run):
+                out = io.StringIO()
+                self.assertEqual(sync.command_import(self.location, "a", dry_run, FakeCli, out), 0)
+                self.assertIn("excluded old: Removed documentation paths", out.getvalue())
+        self.assertEqual([r["id"] for r in FakeCli.databases[self.paths("a").db_path]], ["current"])
+        self.assertEqual(source.read_bytes(), before)
+
+    def test_exclusion_applies_to_status_and_conflicts_but_does_not_delete_local_record(self):
+        self.location = replace(self.location, config=StoreConfig(excluded_memory_ids={"old": "Obsolete"}))
+        db = self.paths("a").db_path
+        db.parent.mkdir(parents=True)
+        db.touch()
+        original = record("old", "2026-01-01")
+        FakeCli.databases[db] = [original]
+        store.write_export(self.paths("b").export_path, [record("old", "2026-05-01", title="renamed")])
+        for command in (
+            lambda out: sync.command_status(self.location, "a", out),
+            lambda out: sync.command_import(self.location, "a", False, FakeCli, out),
+        ):
+            out = io.StringIO()
+            self.assertEqual(command(out), 0)
+            self.assertIn("excluded old: Obsolete", out.getvalue())
+            self.assertNotIn("changed on another host", out.getvalue())
+            self.assertNotIn("1 not in own export", out.getvalue())
+        self.assertEqual(FakeCli.databases[db], [original])
+
+    def test_zero_exit_partial_import_is_a_failure_and_retry_selects_only_missing_id(self):
+        class PartialCli(FakeCli):
+            def import_records(self, records):
+                super().import_records(records[:1])
+                return "Imported 1/2 memories"
+
+        store.write_export(self.paths("b").export_path, [record("1"), record("2")])
+        out = io.StringIO()
+        self.assertEqual(sync.command_import(self.location, "a", False, PartialCli, out), 1)
+        self.assertIn("import verification failed for 1/2 records: 2", out.getvalue())
+        self.assertEqual(sync.command_import(self.location, "a", False, FakeCli, io.StringIO()), 0)
+        self.assertEqual([r["id"] for r in FakeCli.databases[self.paths("a").db_path]], ["1", "2"])
+
+    def test_zero_exit_rejected_legacy_type_is_a_failure(self):
+        class RejectingCli(FakeCli):
+            def import_records(self, records):
+                return "Imported 0/1 memories"
+
+        store.write_export(self.paths("b").export_path, [record("legacy", memory_type="documentation")])
+        out = io.StringIO()
+        self.assertEqual(sync.command_import(self.location, "a", False, RejectingCli, out), 1)
+        self.assertIn("import verification failed for 1/1 records: legacy", out.getvalue())
+
+    def test_import_verifies_persisted_content_type_and_title_not_just_id(self):
+        for field in ("title", "content", "type"):
+            class MismatchingCli(FakeCli):
+                def import_records(self, records):
+                    return super().import_records([{**r, field: "unexpected"} for r in records])
+
+            with self.subTest(field=field):
+                FakeCli.databases = {}
+                store.write_export(self.paths("b").export_path, [record("1")])
+                out = io.StringIO()
+                self.assertEqual(sync.command_import(self.location, "a", False, MismatchingCli, out), 1)
+                self.assertIn("import verification failed", out.getvalue())
 
     def test_import_reports_conflicts_without_applying_them(self):
         db = self.paths("a").db_path

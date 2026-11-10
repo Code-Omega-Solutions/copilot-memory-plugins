@@ -39,6 +39,7 @@ class StoreConfig:
     module: str = DEFAULT_MODULE
     binary: str | None = None
     extra_env: Mapping[str, str] = field(default_factory=dict)
+    excluded_memory_ids: Mapping[str, str] = field(default_factory=dict)
 
     def server_env(self) -> dict[str, str]:
         return {**DEFAULT_SERVER_ENV, **self.extra_env}
@@ -49,7 +50,10 @@ class StoreConfig:
             server["binary"] = self.binary
         if self.extra_env:
             server["env"] = dict(self.extra_env)
-        return {"storeDir": self.store_dir, "ragDir": self.rag_dir, "server": server}
+        result = {"storeDir": self.store_dir, "ragDir": self.rag_dir, "server": server}
+        if self.excluded_memory_ids:
+            result["excludedMemoryIds"] = dict(self.excluded_memory_ids)
+        return result
 
 
 def _relative_dir(value: Any, name: str) -> str:
@@ -79,12 +83,19 @@ def parse_config(data: Any) -> StoreConfig:
     binary = server.get("binary")
     if binary is not None and (not isinstance(binary, str) or not binary.strip()):
         raise ConfigError("server.binary must be a non-empty string when set")
+    exclusions = data.get("excludedMemoryIds", {})
+    if not isinstance(exclusions, dict) or not all(
+        isinstance(key, str) and key.strip() and isinstance(reason, str) and reason.strip()
+        for key, reason in exclusions.items()
+    ):
+        raise ConfigError("excludedMemoryIds must map non-empty memory IDs to non-empty review reasons")
     return StoreConfig(
         store_dir=_relative_dir(data.get("storeDir", DEFAULT_STORE_DIR), "storeDir"),
         rag_dir=_relative_dir(data.get("ragDir", DEFAULT_RAG_DIR), "ragDir"),
         module=module,
         binary=binary,
         extra_env=dict(env),
+        excluded_memory_ids=dict(exclusions),
     )
 
 

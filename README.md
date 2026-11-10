@@ -166,6 +166,11 @@ git push
 
 `memory-store sync` runs `import` followed by `export`.
 
+Import verifies that requested records were actually stored; partial upstream
+success is a failure, not a completed sync. For reviewed obsolete records,
+configure exact IDs and reasons in `excludedMemoryIds` rather than editing
+another host's export. See [import verification and exclusions](plugins/memory-sync/README.md#reviewed-obsolete-records-and-import-verification).
+
 `export` checkpoints the SQLite write-ahead log, so the committed
 `memories.db` is self-contained. Always commit `memories.db` and
 `memories.json` of your host together.
