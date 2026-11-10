@@ -99,6 +99,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("host:          box", out)
 
+    def test_sync_does_not_export_after_an_incomplete_import(self):
+        (self.root / CONFIG_FILENAME).write_text("{}", encoding="utf-8")
+        with patch.object(cli, "command_import", return_value=1), \
+                patch.object(cli, "command_export") as export:
+            code, _, _ = self.run_cli("sync", "--workspace", str(self.root), "--host", "box")
+        self.assertEqual(code, 1)
+        export.assert_not_called()
+
     def test_invalid_host_and_config_are_clean_errors(self):
         code, _, err = self.run_cli("status", "--workspace", str(self.root), "--host", "a/b")
         self.assertEqual((code, err.startswith("error:")), (1, True))

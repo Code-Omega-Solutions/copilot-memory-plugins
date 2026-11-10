@@ -32,13 +32,20 @@ class ParseConfigTests(unittest.TestCase):
             {"server": {"env": {"MCP_MEMORY_DB_PATH": "x"}}},
             {"server": {"module": "github.com/x/y"}},
             {"server": {"binary": ""}},
+            {"excludedMemoryIds": []},
+            {"excludedMemoryIds": {"obsolete": ""}},
+            {"excludedMemoryIds": {" ": "obsolete"}},
+            {"excludedMemoryIds": {"obsolete": 1}},
         ]
         for case in cases:
             with self.subTest(case=case), self.assertRaises(config.ConfigError):
                 config.parse_config(case)
 
     def test_round_trip_through_json(self):
-        original = config.StoreConfig(store_dir="mem", binary="/opt/server", extra_env={"MCP_ALLOW_DIRS": "docs"})
+        original = config.StoreConfig(
+            store_dir="mem", binary="/opt/server", extra_env={"MCP_ALLOW_DIRS": "docs"},
+            excluded_memory_ids={"obsolete": "Replaced by maintained guidance"},
+        )
         self.assertEqual(config.parse_config(original.to_json()), original)
 
 
