@@ -107,11 +107,38 @@ extensions and the session MCP restart API.
 
 The extension checks the effective server's plugin provenance and enabled
 state before replacing it and refuses additional same-prefix memory-server
-registrations. Registration checks cannot detect every differently named
-alias; remove those manually. VS Code uses its existing workspace interpolation
-and does not require the Copilot CLI extension.
+registrations. If the expected plugin-owned registration is missing, disabled,
+or owned by another source, memory calls are explicitly denied rather than
+allowed to use an unverified server. Registration checks cannot detect every
+differently named alias; remove those manually. VS Code uses its existing
+workspace interpolation and does not require the Copilot CLI extension.
+Some SDK hosts omit `source` or `sourcePlugin` from the effective MCP
+registration. On those hosts the extension cannot prove ownership, so it
+surfaces a routing error and denies memory calls until the host exposes both
+fields; it will not infer ownership from a matching server name or readiness.
 The session restart omits an environment override, preserving the host's
 inherited server environment and configured runtime settings.
+
+The Copilot app session API currently does not expose the server-level MCP
+discovery or session-list methods to this extension. In the verified desktop
+runtime, `mcp.list()` also omitted the registration's source, plugin owner,
+version, and owned-registration receipt. The session-management list was
+disabled, so the extension could not verify a coordinated child session either.
+It therefore routes only from its own session working directory, denies memory
+calls when plugin ownership is missing, and never selects a child by name,
+recency, or an unverified path supplied by another session. A parent
+conversation cannot automatically resolve or verify a child worktree with the
+current API. The SDK does offer `mcp.startServer` for a caller-configured,
+session-scoped server that is reaped when the session ends and does not change
+persistent MCP configuration. A future explicit coordinator workflow could use
+that API with a uniquely named server and a child path freshly obtained from the
+host app, leaving the existing `agent-memory-mcp` registration untouched.
+However, the extension cannot validate the supplied session ID/path relationship
+or detect a later child path change; tool namespace and startup permission
+behavior also need a controlled runtime test. This is not currently implemented
+or an automatic routing guarantee. Fully validated routing requires the host to
+provide a direct-child identity/current-working-directory capability and an
+ownership-aware way to operate on the selected server registration.
 
 Setup installs the pinned server binary in `~/.copilot-memory/bin`, independent
 of `PLUGIN_DATA`, so both the hook and session extension resolve the same

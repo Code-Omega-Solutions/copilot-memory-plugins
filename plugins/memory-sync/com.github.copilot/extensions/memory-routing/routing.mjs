@@ -72,9 +72,25 @@ export function createRouter(session, pluginRoot, options = {}) {
                 throw new Error("multiple memory server registrations; resolve the duplicate before use");
             }
             const entry = matches[0];
-            if (!entry || !entry.enabled || entry.source !== "plugin" || entry.sourcePlugin !== "memory-sync") {
+            if (!entry) {
                 boundRoot = undefined;
-                return false;
+                throw new Error("the memory-sync server registration is missing");
+            }
+            if (!entry.enabled) {
+                boundRoot = undefined;
+                throw new Error("the memory-sync server registration is disabled");
+            }
+            if (entry.source === undefined) {
+                boundRoot = undefined;
+                throw new Error("the Copilot runtime did not report MCP provenance; update the runtime to expose source and sourcePlugin before routing");
+            }
+            if (entry.source === "plugin" && entry.sourcePlugin === undefined) {
+                boundRoot = undefined;
+                throw new Error("the Copilot runtime did not report the MCP plugin owner; update the runtime to expose sourcePlugin before routing");
+            }
+            if (entry.source !== "plugin" || entry.sourcePlugin !== "memory-sync") {
+                boundRoot = undefined;
+                throw new Error("the memory server is not owned by the memory-sync plugin");
             }
             if (servers.some((item) => item.name !== SERVER && item.enabled &&
                 (item.name.startsWith(`${SERVER}-`) ||
