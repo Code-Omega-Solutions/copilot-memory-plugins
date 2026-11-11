@@ -204,7 +204,7 @@ test("denies calls when the server never becomes ready", async () => {
     const binding = router(session, { timeoutMs: 5, pollIntervalMs: 1 });
     const result = await binding.preToolUse({ toolName: "agent-memory-mcp-recall_memory" });
     assert.equal(result.permissionDecision, "deny");
-    assert.match(result.permissionDecisionReason, /did not become ready/);
+    assert.match(result.permissionDecisionReason, /^Memory workspace routing is not ready:/);
 });
 
 test("surfaces a stable server startup failure", async () => {
@@ -221,5 +221,5 @@ test("surfaces a stable server startup failure", async () => {
     const binding = router(session, { timeoutMs: 5, pollIntervalMs: 1 });
     const result = await binding.preToolUse({ toolName: "agent-memory-mcp-recall_memory" });
     assert.equal(result.permissionDecision, "deny");
-    assert.match(result.permissionDecisionReason, /failed: process exited/);
+    assert.match(result.permissionDecisionReason, /memory server failed to start: process exited/);
 });

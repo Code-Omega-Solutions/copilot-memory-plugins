@@ -55,7 +55,7 @@ export function createRouter(session, pluginRoot, options = {}) {
             }
             lastStatus = entry.live?.status ?? "unavailable";
             if (lastStatus === "failed") {
-                if (entry.live.error) lastStatus = `failed: ${entry.live.error}`;
+                throw new Error(`memory server failed to start${entry.live.error ? `: ${entry.live.error}` : ""}`);
             }
             if (entry.live?.status === "connected" && entry.live.toolsLoaded === true) return;
             await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
