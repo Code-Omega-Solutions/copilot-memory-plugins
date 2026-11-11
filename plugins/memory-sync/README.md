@@ -79,31 +79,34 @@ be detected. Verify the active connection and store path in your client.
 ### Workspace resolution
 
 The workspace is the first of these that names a usable directory:
-`MEMORY_WORKSPACE`, then `--workspace`, then the git work tree that contains the
-working directory. Unexpanded placeholders such as `${workspaceFolder}` and the
-plugin's own installation and data directories are skipped. Without a
-workspace, or without `.memory-store.json` in it, `serve` uses a private store
-under `PLUGIN_DATA` (or `~/.copilot-memory`) and never writes into the
-repository.
+`--workspace`, then `MEMORY_WORKSPACE`, then the git work tree that contains
+the working directory. The explicit `--workspace` argument wins over
+`MEMORY_WORKSPACE` so a per-session worktree cannot be redirected by a stale
+environment value. A supplied but invalid path, including an unexpanded
+`${workspaceFolder}` placeholder, is rejected rather than skipped. When
+`serve` resolves a workspace that lacks `.memory-store.json`, it exits with
+setup guidance instead of connecting to an unrelated fallback store. A
+private fallback under `PLUGIN_DATA` (or `~/.copilot-memory`) remains available
+only when no workspace context can be identified at all.
 
 The session-start hook uses `setup --hook-input` to read the workspace `cwd`
 from the JSON payload on stdin, because the hook process may start in the
-plugin installation directory. Explicit `--workspace` and `MEMORY_WORKSPACE`
-retain their precedence.
+plugin installation directory.
 
 If an MCP client does not expand `${workspaceFolder}` in plugin server
-arguments, configure a workspace-scoped server with an explicit
-`serve --workspace DIR` argument, then restart that connection. Restarting
-the fallback server without correcting its workspace does not enable sync.
+arguments, the server now reports the routing failure and exits. Configure a
+workspace-scoped server with a real, client-supported workspace path in
+`serve --workspace DIR`, then restart that connection. The plugin process
+cannot infer a per-session path from its installation directory; do not point
+it at a global or most-recent workspace.
 
 The packaged plugin registration also requires `uv` to be on the MCP host's
 `PATH`. If VS Code cannot start the server, inspect **MCP: List Servers** →
 `agent-memory-mcp` → **Show Output**: a missing `uv` or unresolved
 `${PLUGIN_ROOT}` prevents the launcher from starting and is reported by the MCP
 host before this plugin can emit diagnostics. If `${workspaceFolder}` reaches
-the launcher unexpanded, its stderr notes the rejected placeholder and the
-startup line reports `synced=no`; do not treat that fallback connection as
-workspace synchronization.
+the launcher unexpanded, its stderr reports the rejected placeholder and the
+server exits without starting against a fallback store.
 
 ### Reviewed obsolete records and import verification
 

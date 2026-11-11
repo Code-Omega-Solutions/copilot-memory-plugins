@@ -77,6 +77,11 @@ Agent plugins require `chat.plugins.enabled`. Trust the marketplace when VS Code
 asks; the plugin starts an MCP server on your machine.
 
 The plugin registers the server `agent-memory-mcp` and the skill `memory-sync`.
+A repository change does not update a plugin already installed on a machine.
+After a release containing a fix is available, update or reinstall `memory-sync`
+from **Agent Customizations** in VS Code, then restart its `agent-memory-mcp`
+connection (**MCP: List Servers** → **Restart**). For Copilot CLI, refresh the
+plugin installation and start a new `copilot` process.
 
 ### Copilot CLI
 
@@ -242,7 +247,7 @@ Environment variables read by the plugin:
 | --- | --- |
 | `AGENT_MEMORY_MCP_BIN` | Server executable; wins over `server.binary` and `go run`. |
 | `MEMORY_STORE_HOST` | Host key instead of the system hostname. |
-| `MEMORY_WORKSPACE` | Workspace root, when the server cannot infer it. |
+| `MEMORY_WORKSPACE` | Workspace root when `--workspace` was not supplied and the process cannot infer it. |
 
 ## Registering the server per workspace instead
 
@@ -289,9 +294,9 @@ SQLite serializes them, but the agent sees every memory tool twice.
 
 - The plugin passes `${workspaceFolder}` to locate the workspace. In a
   multi-root VS Code window, or in a client that does not expand it, the server
-  falls back to its working directory and, when that is not a workspace, to the
-  private store. Set `MEMORY_WORKSPACE` or use a workspace registration in that
-  case. `memory-store serve` logs the workspace it chose to stderr (VS Code:
+  fails closed rather than using another workspace or fallback store. Use a
+  workspace-scoped registration with a client-supported workspace path instead.
+  `memory-store serve` logs routing errors to stderr (VS Code:
   **MCP: List Servers** → **Show Output**).
 - Records are imported without re-embedding when the server's embedding
   provider is unreachable; semantic recall of those records improves once the

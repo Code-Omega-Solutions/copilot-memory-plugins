@@ -79,14 +79,14 @@ class PackagedMcpTests(unittest.TestCase):
         self.assertIn(f"workspace={workspace}", result.stderr)
         self.assertIn("synced=yes", result.stderr)
 
-    def test_packaged_registration_reports_unexpanded_workspace(self):
+    def test_packaged_registration_refuses_unexpanded_workspace(self):
         result, capture = self.launch("${workspaceFolder}")
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(capture.is_file())
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(capture.exists())
         self.assertIn("unexpanded placeholder", result.stderr)
-        self.assertIn("using the unsynced fallback store", result.stderr)
-        self.assertIn("synced=no", result.stderr)
+        self.assertIn("Configure a workspace-scoped server", result.stderr)
+        self.assertNotIn("using the unsynced fallback store", result.stderr)
 
 
 if __name__ == "__main__":
