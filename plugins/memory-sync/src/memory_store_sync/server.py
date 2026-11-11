@@ -17,9 +17,10 @@ from typing import Mapping, Sequence
 
 from .config import StoreConfig
 from .store import host_paths
-from .workspace import StoreLocation, fallback_root
+from .workspace import StoreLocation
 
 BINARY_ENV = "AGENT_MEMORY_MCP_BIN"
+RUNTIME_DIR_ENV = "MEMORY_STORE_RUNTIME_DIR"
 NO_RUNTIME_EXIT = 2
 
 
@@ -28,10 +29,12 @@ class NoServerRuntime(RuntimeError):
 
 
 def managed_binary_path(config: StoreConfig, environ: Mapping[str, str]) -> Path:
-    """Where ``memory-store setup`` installs the pinned server; one folder per module version."""
+    """Where setup and session-launched servers find the same pinned binary."""
     tag = hashlib.sha256(config.module.encode()).hexdigest()[:12]
     name = "agent-memory-mcp.exe" if sys.platform == "win32" else "agent-memory-mcp"
-    return fallback_root(environ) / "bin" / tag / name
+    override = environ.get(RUNTIME_DIR_ENV, "").strip()
+    root = Path(override).expanduser() if override else Path.home() / ".copilot-memory" / "bin"
+    return root / tag / name
 
 
 def server_command(config: StoreConfig, environ: Mapping[str, str], which=shutil.which) -> list[str]:

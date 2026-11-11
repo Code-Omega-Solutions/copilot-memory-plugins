@@ -12,6 +12,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Callable, Mapping, TextIO
 
@@ -19,7 +20,7 @@ from .config import CONFIG_FILENAME, StoreConfig
 from .init import command_init
 from .server import BINARY_ENV, managed_binary_path
 from .store import host_paths
-from .workspace import PACKAGE_PLUGIN_ROOT, StoreLocation, find_git_root, locate_store
+from .workspace import FALLBACK_DATA_ENVS, PACKAGE_PLUGIN_ROOT, StoreLocation, fallback_root, find_git_root, locate_store
 
 INSTRUCTIONS_PATH = Path(".github") / "copilot-instructions.md"
 BEGIN_MARKER = "<!-- memory-sync:begin (managed by the memory-sync plugin; edits inside are overwritten) -->"
@@ -182,6 +183,27 @@ def install_server(
     target = managed_binary_path(config, environ)
     if target.is_file():
         print(f"server binary already installed: {target}", file=out)
+        return True
+    has_plugin_data = any(environ.get(name, "").strip() and "${" not in environ[name] for name in FALLBACK_DATA_ENVS)
+    legacy = fallback_root(environ) / "bin" / target.parent.name / target.name
+    if has_plugin_data and legacy != target and legacy.is_file():
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as temporary:
+                temporary_path = Path(temporary.name)
+            try:
+                shutil.copy2(legacy, temporary_path)
+                try:
+                    os.link(temporary_path, target)
+                except FileExistsError:
+                    if not target.is_file():
+                        raise
+            finally:
+                temporary_path.unlink()
+        except OSError as error:
+            print(f"error: cannot reuse existing managed server binary: {error}", file=out)
+            return False
+        print(f"reused existing managed server binary: {target}", file=out)
         return True
     go = which("go")
     if go is None:

@@ -12,7 +12,7 @@ class ServerCommandTests(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
-        self.data = {"PLUGIN_DATA": self._tmp.name}
+        self.data = {server.RUNTIME_DIR_ENV: self._tmp.name}
 
     def test_environment_binary_wins(self):
         command = server.server_command(StoreConfig(binary="/cfg"), {server.BINARY_ENV: "/env"}, which=lambda _: None)
@@ -35,6 +35,13 @@ class ServerCommandTests(unittest.TestCase):
     def test_missing_runtime_is_reported(self):
         with self.assertRaisesRegex(server.NoServerRuntime, "go install"):
             server.server_command(StoreConfig(), self.data, which=lambda _: None)
+
+    def test_managed_binary_is_independent_of_plugin_data(self):
+        config = StoreConfig()
+        self.assertEqual(
+            server.managed_binary_path(config, {"PLUGIN_DATA": "one"}),
+            server.managed_binary_path(config, {"COPILOT_PLUGIN_DATA": "two"}),
+        )
 
 
 class ServerEnvironmentTests(unittest.TestCase):

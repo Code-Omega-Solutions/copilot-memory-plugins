@@ -11,6 +11,7 @@ Contents:
 | --- | --- |
 | `mcp.json` | Registers the `agent-memory-mcp` server, started through `bin/memory-store.py serve`. |
 | `com.github.copilot/hooks/hooks.json` | `sessionStart` hook that runs `memory-store setup` in the workspace. |
+| `com.github.copilot/extensions/memory-routing/` | Copilot CLI/desktop session workspace routing. |
 | `skills/memory-sync/SKILL.md` | Session-start, session-end and reconciliation workflow for agents. |
 | `src/memory_store_sync/` | The `memory-store` CLI (Python standard library only). |
 | `tests/` | Unit tests (`python -m unittest`). |
@@ -79,31 +80,54 @@ be detected. Verify the active connection and store path in your client.
 ### Workspace resolution
 
 The workspace is the first of these that names a usable directory:
-`MEMORY_WORKSPACE`, then `--workspace`, then the git work tree that contains the
-working directory. Unexpanded placeholders such as `${workspaceFolder}` and the
-plugin's own installation and data directories are skipped. Without a
-workspace, or without `.memory-store.json` in it, `serve` uses a private store
-under `PLUGIN_DATA` (or `~/.copilot-memory`) and never writes into the
-repository.
+`--workspace`, then `MEMORY_WORKSPACE`, then the git work tree that contains
+the working directory. The explicit `--workspace` argument wins over
+`MEMORY_WORKSPACE` so a per-session worktree cannot be redirected by a stale
+environment value. A supplied but invalid path, including an unexpanded
+`${workspaceFolder}` placeholder, is rejected rather than skipped. When
+`serve` resolves a workspace that lacks `.memory-store.json`, it exits with
+setup guidance instead of connecting to an unrelated fallback store. A
+private fallback under `PLUGIN_DATA` (or `~/.copilot-memory`) remains available
+only when no workspace context can be identified at all.
 
 The session-start hook uses `setup --hook-input` to read the workspace `cwd`
 from the JSON payload on stdin, because the hook process may start in the
-plugin installation directory. Explicit `--workspace` and `MEMORY_WORKSPACE`
-retain their precedence.
+plugin installation directory.
 
-If an MCP client does not expand `${workspaceFolder}` in plugin server
-arguments, configure a workspace-scoped server with an explicit
-`serve --workspace DIR` argument, then restart that connection. Restarting
-the fallback server without correcting its workspace does not enable sync.
+In Copilot CLI and desktop, the plugin extension reads the current session's
+working directory through the Copilot SDK and restarts the plugin's own
+`agent-memory-mcp` connection with that workspace explicitly. It does not use
+the session artifact directory, a global workspace variable, or another
+session's state. An unexpanded `${workspaceFolder}` fails closed until that
+restart completes. The extension requires permission to register its pre-tool
+hook; when permission is denied or extension loading is unavailable, the
+server does not start with the unresolved placeholder. Resolve any reported
+routing error and restart the session. SDK hosts must support loading plugin
+extensions and the session MCP restart API.
+
+The extension checks the effective server's plugin provenance and enabled
+state before replacing it and refuses additional same-prefix memory-server
+registrations. Registration checks cannot detect every differently named
+alias; remove those manually. VS Code uses its existing workspace interpolation
+and does not require the Copilot CLI extension.
+The session restart omits an environment override, preserving the host's
+inherited server environment and configured runtime settings.
+
+Setup installs the pinned server binary in `~/.copilot-memory/bin`, independent
+of `PLUGIN_DATA`, so both the hook and session extension resolve the same
+binary. Set `MEMORY_STORE_RUNTIME_DIR` consistently in the host environment to
+choose another binary directory. Setup reuses the same-version managed binary
+from the previous plugin data directory when available; otherwise it installs
+the pinned binary again. Existing plugin data and memory stores are not moved
+or removed.
 
 The packaged plugin registration also requires `uv` to be on the MCP host's
 `PATH`. If VS Code cannot start the server, inspect **MCP: List Servers** →
 `agent-memory-mcp` → **Show Output**: a missing `uv` or unresolved
 `${PLUGIN_ROOT}` prevents the launcher from starting and is reported by the MCP
 host before this plugin can emit diagnostics. If `${workspaceFolder}` reaches
-the launcher unexpanded, its stderr notes the rejected placeholder and the
-startup line reports `synced=no`; do not treat that fallback connection as
-workspace synchronization.
+the launcher unexpanded, its stderr reports the rejected placeholder and the
+server exits without starting against a fallback store.
 
 ### Reviewed obsolete records and import verification
 

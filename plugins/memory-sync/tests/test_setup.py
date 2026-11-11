@@ -41,13 +41,13 @@ class InstallServerTests(unittest.TestCase):
     def test_missing_go_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = io.StringIO()
-            ok = setup_mod.install_server(StoreConfig(), {"PLUGIN_DATA": tmp}, out, which=lambda _: None)
+            ok = setup_mod.install_server(StoreConfig(), {"MEMORY_STORE_RUNTIME_DIR": tmp}, out, which=lambda _: None)
             self.assertFalse(ok)
             self.assertIn("go", out.getvalue())
 
     def test_go_install_targets_managed_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
-            env = {"PLUGIN_DATA": tmp}
+            env = {"MEMORY_STORE_RUNTIME_DIR": tmp}
             config = StoreConfig()
             target = setup_mod.managed_binary_path(config, env)
             calls = []
@@ -61,6 +61,22 @@ class InstallServerTests(unittest.TestCase):
             self.assertEqual(calls, [(["/go", "install", config.module], str(target.parent))])
             self.assertTrue(setup_mod.install_server(config, env, io.StringIO(), which=lambda _: "/go", run=run))
             self.assertEqual(len(calls), 1)
+
+    def test_existing_plugin_data_binary_is_reused_without_go_or_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = {"COPILOT_PLUGIN_DATA": str(root / "old"), "MEMORY_STORE_RUNTIME_DIR": str(root / "new")}
+            config = StoreConfig()
+            target = setup_mod.managed_binary_path(config, env)
+            legacy = root / "old" / "bin" / target.parent.name / target.name
+            legacy.parent.mkdir(parents=True)
+            legacy.write_bytes(b"existing binary")
+
+            self.assertTrue(setup_mod.install_server(config, env, io.StringIO(), which=lambda _: None))
+            self.assertEqual(target.read_bytes(), b"existing binary")
+            legacy.write_bytes(b"other binary")
+            self.assertTrue(setup_mod.install_server(config, env, io.StringIO(), which=lambda _: None))
+            self.assertEqual(target.read_bytes(), b"existing binary")
 
 
 class CommandSetupTests(unittest.TestCase):

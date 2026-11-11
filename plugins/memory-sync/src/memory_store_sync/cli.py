@@ -68,7 +68,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return command_setup(root, host)
             return command_init(root, host, force=args.force)
 
-        location = locate_store(args.workspace)
+        location = locate_store(args.workspace, require_config=args.command == "serve")
         if args.command == "serve":
             server_args = args.server_args[1:] if args.server_args[:1] == ["--"] else args.server_args
             return serve(location, host, server_args)

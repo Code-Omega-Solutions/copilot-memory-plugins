@@ -4,14 +4,15 @@ Clients start plugin servers in different working directories. VS Code, for
 example, uses the plugin's install directory. The workspace is therefore
 taken from the first usable candidate, in this order:
 
-1. ``MEMORY_WORKSPACE``
-2. ``--workspace`` (the plugin passes ``${workspaceFolder}``)
+1. ``--workspace`` (the plugin passes ``${workspaceFolder}``)
+2. ``MEMORY_WORKSPACE``
 3. the git work tree that contains the working directory
 
 Candidates inside the plugin's own directories, values that still contain an
-unexpanded ``${...}`` placeholder, and paths that do not exist are skipped.
-A workspace without ``.memory-store.json`` has not opted in. In that case the
-server uses a per-user fallback store that is never synced.
+unexpanded ``${...}`` placeholder, and paths that do not exist are rejected
+when supplied explicitly. This prevents a broken host interpolation from
+silently routing an MCP server to another workspace or fallback store. A
+workspace without ``.memory-store.json`` has not opted in.
 """
 
 from __future__ import annotations
@@ -45,6 +46,10 @@ class StoreLocation:
     notes: tuple[str, ...] = field(default_factory=tuple)
 
 
+class WorkspaceRoutingError(ValueError):
+    """A supplied workspace route cannot safely identify the intended workspace."""
+
+
 def find_git_root(path: Path) -> Path | None:
     """Nearest ancestor (inclusive) holding a ``.git`` directory or worktree file."""
     current = path.resolve()
@@ -72,11 +77,15 @@ def resolve_workspace(
     explicit: str | None, cwd: Path, environ: Mapping[str, str]
 ) -> tuple[Path | None, list[str]]:
     """The workspace root and diagnostic notes about skipped candidates."""
+    if explicit is not None and not explicit.strip():
+        raise WorkspaceRoutingError(
+            "--workspace is empty; refusing to route memory without the session workspace path."
+        )
     notes: list[str] = []
     excluded = excluded_roots(environ)
     candidates = [
-        (WORKSPACE_ENV, environ.get(WORKSPACE_ENV, ""), True),
         ("--workspace", explicit or "", True),
+        (WORKSPACE_ENV, environ.get(WORKSPACE_ENV, ""), True),
         ("working directory", str(cwd), False),
     ]
     for source, raw, explicit_choice in candidates:
@@ -84,12 +93,17 @@ def resolve_workspace(
         if not value:
             continue
         if "${" in value:
-            notes.append(f"ignored {source}: unexpanded placeholder {value!r}")
-            continue
+            raise WorkspaceRoutingError(
+                f"{source} contains an unexpanded placeholder; the MCP host did not supply "
+                "the workspace path. Configure a workspace-scoped server with an explicit "
+                "`--workspace DIR` and restart the connection."
+            )
         path = Path(value).expanduser()
         if not path.is_dir():
-            notes.append(f"ignored {source}: {value!r} is not a directory")
-            continue
+            raise WorkspaceRoutingError(
+                f"{source} does not name an existing directory; refusing to route memory "
+                "to a different workspace."
+            )
         root = find_git_root(path)
         if root is None:
             if not explicit_choice:
@@ -97,6 +111,11 @@ def resolve_workspace(
                 continue
             root = path.resolve()
         if any(_is_within(root, parent) for parent in excluded):
+            if explicit_choice:
+                raise WorkspaceRoutingError(
+                    f"{source} resolves inside the plugin's own directories; refusing to "
+                    "route memory to the plugin installation."
+                )
             notes.append(f"ignored {source}: {root} is inside the plugin's own directories")
             continue
         return root, notes
@@ -111,7 +130,12 @@ def fallback_root(environ: Mapping[str, str]) -> Path:
     return Path.home() / FALLBACK_HOME_DIRNAME
 
 
-def locate_store(explicit: str | None = None, cwd: Path | None = None, environ: Mapping[str, str] | None = None) -> StoreLocation:
+def locate_store(
+    explicit: str | None = None,
+    cwd: Path | None = None,
+    environ: Mapping[str, str] | None = None,
+    require_config: bool = False,
+) -> StoreLocation:
     env = os.environ if environ is None else environ
     workspace, notes = resolve_workspace(explicit, cwd or Path.cwd(), env)
     config = load_config(workspace) if workspace else None
@@ -124,6 +148,11 @@ def locate_store(explicit: str | None = None, cwd: Path | None = None, environ: 
             server_cwd=workspace,
             synced=True,
             notes=tuple(notes),
+        )
+    if require_config and workspace is not None:
+        raise WorkspaceRoutingError(
+            f"{workspace} has no .memory-store.json; run `memory-store setup` in that "
+            "workspace before starting the memory MCP server."
         )
     root = fallback_root(env)
     reason = "no workspace found" if workspace is None else f"{workspace} has no .memory-store.json (run `memory-store init` to opt in)"
