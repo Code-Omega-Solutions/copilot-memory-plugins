@@ -119,6 +119,19 @@ fields; it will not infer ownership from a matching server name or readiness.
 The session restart omits an environment override, preserving the host's
 inherited server environment and configured runtime settings.
 
+The Copilot app session API currently does not expose the server-level MCP
+discovery or session-list methods to this extension. In the verified desktop
+runtime, `mcp.list()` also omitted the registration's source, plugin owner,
+version, and owned-registration receipt. The session-management list was
+disabled, so the extension could not verify a coordinated child session either.
+It therefore routes only from its own session working directory, denies memory
+calls when plugin ownership is missing, and never selects a child by name,
+recency, or an unverified path supplied by another session. A parent
+conversation cannot safely bind to an agents worktree with the current API.
+Supporting that requires a session-scoped host API that returns direct-child
+identity and current working directory, exposes plugin registration provenance,
+and restarts only a verified plugin-owned registration.
+
 Setup installs the pinned server binary in `~/.copilot-memory/bin`, independent
 of `PLUGIN_DATA`, so both the hook and session extension resolve the same
 binary. Set `MEMORY_STORE_RUNTIME_DIR` consistently in the host environment to
