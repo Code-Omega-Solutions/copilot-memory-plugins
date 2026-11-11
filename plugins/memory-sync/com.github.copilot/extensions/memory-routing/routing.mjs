@@ -74,7 +74,7 @@ export function createRouter(session, pluginRoot, options = {}) {
             const entry = matches[0];
             if (!entry || !entry.enabled || entry.source !== "plugin" || entry.sourcePlugin !== "memory-sync") {
                 boundRoot = undefined;
-                return false;
+                throw new Error("the memory-sync server registration is missing, disabled, or not plugin-owned");
             }
             if (servers.some((item) => item.name !== SERVER && item.enabled &&
                 (item.name.startsWith(`${SERVER}-`) ||

@@ -107,9 +107,11 @@ extensions and the session MCP restart API.
 
 The extension checks the effective server's plugin provenance and enabled
 state before replacing it and refuses additional same-prefix memory-server
-registrations. Registration checks cannot detect every differently named
-alias; remove those manually. VS Code uses its existing workspace interpolation
-and does not require the Copilot CLI extension.
+registrations. If the expected plugin-owned registration is missing, disabled,
+or owned by another source, memory calls are explicitly denied rather than
+allowed to use an unverified server. Registration checks cannot detect every
+differently named alias; remove those manually. VS Code uses its existing
+workspace interpolation and does not require the Copilot CLI extension.
 The session restart omits an environment override, preserving the host's
 inherited server environment and configured runtime settings.
 
