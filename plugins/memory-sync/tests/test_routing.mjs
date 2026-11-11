@@ -102,7 +102,7 @@ test("refuses memory access through disabled, user or managed registrations", as
         const session = fakeSession();
         session.setConfigured([entry]);
         const binding = router(session);
-        await assert.rejects(binding.ensureReady(), /missing, disabled, or not plugin-owned/);
+        await assert.rejects(binding.ensureReady(), /registration is disabled|not owned by the memory-sync plugin/);
         const denied = await binding.preToolUse({ toolName: "agent-memory-mcp-memory_stats" });
         assert.equal(denied.permissionDecision, "deny");
         assert.equal(session.calls.length, 0);
@@ -113,9 +113,40 @@ test("refuses memory access when the plugin registration is missing", async () =
     const session = fakeSession();
     session.setConfigured([]);
     const binding = router(session);
-    await assert.rejects(binding.ensureReady(), /missing, disabled, or not plugin-owned/);
+    await assert.rejects(binding.ensureReady(), /registration is missing/);
     const denied = await binding.preToolUse({ toolName: "agent-memory-mcp-memory_stats" });
     assert.equal(denied.permissionDecision, "deny");
+    assert.equal(session.calls.length, 0);
+});
+
+test("surfaces and denies hosts that omit MCP provenance", async () => {
+    const session = fakeSession();
+    session.setConfigured([{
+        name: "agent-memory-mcp",
+        enabled: true,
+        live: { status: "connected", toolsLoaded: true },
+    }]);
+    const binding = router(session);
+    await assert.rejects(binding.ensureReady(), /runtime did not report MCP provenance/);
+    const denied = await binding.preToolUse({ toolName: "agent-memory-mcp-memory_stats" });
+    assert.equal(denied.permissionDecision, "deny");
+    assert.match(denied.permissionDecisionReason, /update the runtime to expose source and sourcePlugin/);
+    assert.equal(session.calls.length, 0);
+});
+
+test("surfaces plugin registrations whose owner is omitted", async () => {
+    const session = fakeSession();
+    session.setConfigured([{
+        name: "agent-memory-mcp",
+        source: "plugin",
+        enabled: true,
+        live: { status: "connected", toolsLoaded: true },
+    }]);
+    const binding = router(session);
+    await assert.rejects(binding.ensureReady(), /did not report the MCP plugin owner/);
+    const denied = await binding.preToolUse({ toolName: "agent-memory-mcp-memory_stats" });
+    assert.equal(denied.permissionDecision, "deny");
+    assert.match(denied.permissionDecisionReason, /update the runtime to expose sourcePlugin/);
     assert.equal(session.calls.length, 0);
 });
 

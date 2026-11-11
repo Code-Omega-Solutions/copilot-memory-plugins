@@ -112,6 +112,10 @@ or owned by another source, memory calls are explicitly denied rather than
 allowed to use an unverified server. Registration checks cannot detect every
 differently named alias; remove those manually. VS Code uses its existing
 workspace interpolation and does not require the Copilot CLI extension.
+Some SDK hosts omit `source` or `sourcePlugin` from the effective MCP
+registration. On those hosts the extension cannot prove ownership, so it
+surfaces a routing error and denies memory calls until the host exposes both
+fields; it will not infer ownership from a matching server name or readiness.
 The session restart omits an environment override, preserving the host's
 inherited server environment and configured runtime settings.
 
