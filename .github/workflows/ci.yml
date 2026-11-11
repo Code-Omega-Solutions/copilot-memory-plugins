@@ -22,6 +22,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Unit tests
         run: uv run --no-project --python ${{ matrix.python }} python -m unittest discover -s plugins/memory-sync/tests -t plugins/memory-sync -v
+      - name: Session routing tests
+        run: node --test plugins/memory-sync/tests/test_routing.mjs
       - name: Package builds and the CLI starts
         run: uv tool run --from ./plugins/memory-sync memory-store --version
       - name: Manifests are valid JSON

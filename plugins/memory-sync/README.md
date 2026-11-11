@@ -11,6 +11,7 @@ Contents:
 | --- | --- |
 | `mcp.json` | Registers the `agent-memory-mcp` server, started through `bin/memory-store.py serve`. |
 | `com.github.copilot/hooks/hooks.json` | `sessionStart` hook that runs `memory-store setup` in the workspace. |
+| `com.github.copilot/extensions/memory-routing/` | Copilot CLI/desktop session workspace routing. |
 | `skills/memory-sync/SKILL.md` | Session-start, session-end and reconciliation workflow for agents. |
 | `src/memory_store_sync/` | The `memory-store` CLI (Python standard library only). |
 | `tests/` | Unit tests (`python -m unittest`). |
@@ -93,12 +94,32 @@ The session-start hook uses `setup --hook-input` to read the workspace `cwd`
 from the JSON payload on stdin, because the hook process may start in the
 plugin installation directory.
 
-If an MCP client does not expand `${workspaceFolder}` in plugin server
-arguments, the server now reports the routing failure and exits. Configure a
-workspace-scoped server with a real, client-supported workspace path in
-`serve --workspace DIR`, then restart that connection. The plugin process
-cannot infer a per-session path from its installation directory; do not point
-it at a global or most-recent workspace.
+In Copilot CLI and desktop, the plugin extension reads the current session's
+working directory through the Copilot SDK and restarts the plugin's own
+`agent-memory-mcp` connection with that workspace explicitly. It does not use
+the session artifact directory, a global workspace variable, or another
+session's state. An unexpanded `${workspaceFolder}` fails closed until that
+restart completes. The extension requires permission to register its pre-tool
+hook; when permission is denied or extension loading is unavailable, the
+server does not start with the unresolved placeholder. Resolve any reported
+routing error and restart the session. SDK hosts must support loading plugin
+extensions and the session MCP restart API.
+
+The extension checks the effective server's plugin provenance and enabled
+state before replacing it and refuses additional same-prefix memory-server
+registrations. Registration checks cannot detect every differently named
+alias; remove those manually. VS Code uses its existing workspace interpolation
+and does not require the Copilot CLI extension.
+The session restart omits an environment override, preserving the host's
+inherited server environment and configured runtime settings.
+
+Setup installs the pinned server binary in `~/.copilot-memory/bin`, independent
+of `PLUGIN_DATA`, so both the hook and session extension resolve the same
+binary. Set `MEMORY_STORE_RUNTIME_DIR` consistently in the host environment to
+choose another binary directory. Setup reuses the same-version managed binary
+from the previous plugin data directory when available; otherwise it installs
+the pinned binary again. Existing plugin data and memory stores are not moved
+or removed.
 
 The packaged plugin registration also requires `uv` to be on the MCP host's
 `PATH`. If VS Code cannot start the server, inspect **MCP: List Servers** →

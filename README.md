@@ -90,8 +90,9 @@ copilot plugin marketplace add Code-Omega-Solutions/copilot-memory-plugins
 copilot plugin install memory-sync@copilot-memory-plugins
 ```
 
-Start `copilot` from the workspace root: the server locates the workspace from
-its working directory.
+The plugin's Copilot extension binds the server to the current session's
+working directory. Approve its pre-tool hook when prompted; a client that
+cannot load the extension must supply a supported workspace path itself.
 
 ## Enable synchronized memory in a workspace
 
@@ -100,7 +101,7 @@ Nothing to do by hand: the plugin's `sessionStart` hook runs
 and:
 
 - checks that `git` is available and installs the pinned server with
-  `go install` into the plugin data directory (skipped when
+  `go install` into `~/.copilot-memory/bin` (skipped when
   `AGENT_MEMORY_MCP_BIN` or `server.binary` is set; without Go it reports what
   is missing);
 - runs `init` (below);
@@ -110,9 +111,9 @@ and:
   does not exist yet.
 
 Commit `.memory-store.json`, `.gitignore` and `.github/copilot-instructions.md`
-once. Set `MEMORY_STORE_AUTO_SETUP=0` to turn the automatic setup off; the
-server then keeps using the private per-user store until you run
-`memory-store setup` or `memory-store init` yourself. When setup creates the
+once. Set `MEMORY_STORE_AUTO_SETUP=0` to turn the automatic setup off; configure the
+workspace with `memory-store setup` or `memory-store init` yourself before
+starting its server. When setup creates the
 workspace configuration or installs the managed server, it reports that the
 MCP connection must restart. In VS Code, use **MCP: List Servers** →
 `agent-memory-mcp` → **Restart**. Unchanged setup runs do not request another
@@ -247,6 +248,7 @@ Environment variables read by the plugin:
 | --- | --- |
 | `AGENT_MEMORY_MCP_BIN` | Server executable; wins over `server.binary` and `go run`. |
 | `MEMORY_STORE_HOST` | Host key instead of the system hostname. |
+| `MEMORY_STORE_RUNTIME_DIR` | Override the managed server binary directory; set consistently for setup and server processes. |
 | `MEMORY_WORKSPACE` | Workspace root when `--workspace` was not supplied and the process cannot infer it. |
 
 ## Registering the server per workspace instead
@@ -292,12 +294,12 @@ SQLite serializes them, but the agent sees every memory tool twice.
 
 ## Limitations
 
-- The plugin passes `${workspaceFolder}` to locate the workspace. In a
-  multi-root VS Code window, or in a client that does not expand it, the server
-  fails closed rather than using another workspace or fallback store. Use a
-  workspace-scoped registration with a client-supported workspace path instead.
-  `memory-store serve` logs routing errors to stderr (VS Code:
-  **MCP: List Servers** → **Show Output**).
+- The plugin passes `${workspaceFolder}` for VS Code. Copilot CLI/desktop
+  instead uses its session extension to rebind the server to the actual
+  working directory. When the extension cannot load or has not been approved,
+  an unexpanded placeholder fails closed; other clients need a
+  workspace-scoped registration with a supported path. See
+  [workspace resolution](plugins/memory-sync/README.md#workspace-resolution).
 - Records are imported without re-embedding when the server's embedding
   provider is unreachable; semantic recall of those records improves once the
   store is re-embedded.
