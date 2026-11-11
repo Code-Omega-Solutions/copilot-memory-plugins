@@ -127,10 +127,18 @@ disabled, so the extension could not verify a coordinated child session either.
 It therefore routes only from its own session working directory, denies memory
 calls when plugin ownership is missing, and never selects a child by name,
 recency, or an unverified path supplied by another session. A parent
-conversation cannot safely bind to an agents worktree with the current API.
-Supporting that requires a session-scoped host API that returns direct-child
-identity and current working directory, exposes plugin registration provenance,
-and restarts only a verified plugin-owned registration.
+conversation cannot automatically resolve or verify a child worktree with the
+current API. The SDK does offer `mcp.startServer` for a caller-configured,
+session-scoped server that is reaped when the session ends and does not change
+persistent MCP configuration. A future explicit coordinator workflow could use
+that API with a uniquely named server and a child path freshly obtained from the
+host app, leaving the existing `agent-memory-mcp` registration untouched.
+However, the extension cannot validate the supplied session ID/path relationship
+or detect a later child path change; tool namespace and startup permission
+behavior also need a controlled runtime test. This is not currently implemented
+or an automatic routing guarantee. Fully validated routing requires the host to
+provide a direct-child identity/current-working-directory capability and an
+ownership-aware way to operate on the selected server registration.
 
 Setup installs the pinned server binary in `~/.copilot-memory/bin`, independent
 of `PLUGIN_DATA`, so both the hook and session extension resolve the same
