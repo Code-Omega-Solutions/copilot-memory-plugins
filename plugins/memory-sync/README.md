@@ -37,6 +37,9 @@ memory-store [--workspace DIR] [--host KEY] <command>
 has not opted in. `serve` exits with status 2 when neither a server binary nor
 Go is available.
 
+On a fresh host, `import` initializes the database even when no records are
+available. `import --dry-run` does not initialize it.
+
 ### Setup restart behavior
 
 When setup creates `.memory-store.json` or installs the managed server, it

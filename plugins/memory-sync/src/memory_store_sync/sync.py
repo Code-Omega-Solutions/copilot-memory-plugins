@@ -217,6 +217,11 @@ def command_import(
     elif new_records:
         print(f"dry run: {len(new_records)} records would be imported", file=out)
     else:
+        if not dry_run and not paths.db_path.exists():
+            cli.import_records([])
+            if not paths.db_path.is_file():
+                print("error: import did not initialize the host database", file=out)
+                return 1
         print("nothing to import", file=out)
 
     if conflicts:

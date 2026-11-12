@@ -83,6 +83,30 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(FakeCli.databases, {})
         self.assertIn("would be imported", out.getvalue())
 
+    def test_empty_import_initializes_only_a_missing_database(self):
+        paths = self.paths("a")
+        out = io.StringIO()
+        self.assertEqual(sync.command_import(self.location, "a", True, FakeCli, out), 0)
+        self.assertFalse(paths.db_path.exists())
+        self.assertEqual(sync.command_import(self.location, "a", False, FakeCli, out), 0)
+        self.assertTrue(paths.db_path.is_file())
+        self.assertEqual(FakeCli.databases[paths.db_path], [])
+
+        class NoImportCli(FakeCli):
+            def import_records(self, records):
+                raise AssertionError("existing databases must not be reinitialized")
+
+        self.assertEqual(sync.command_import(self.location, "a", False, NoImportCli, out), 0)
+
+    def test_empty_import_reports_failed_initialization(self):
+        class FailedInitializationCli(FakeCli):
+            def import_records(self, records):
+                return "success"
+
+        out = io.StringIO()
+        self.assertEqual(sync.command_import(self.location, "a", False, FailedInitializationCli, out), 1)
+        self.assertIn("did not initialize", out.getvalue())
+
     def test_reviewed_exclusion_skips_only_selected_id_without_changing_sources(self):
         self.location = replace(
             self.location, config=StoreConfig(excluded_memory_ids={"old": "Removed documentation paths"})

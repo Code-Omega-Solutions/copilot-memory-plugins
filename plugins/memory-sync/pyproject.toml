@@ -1,6 +1,6 @@
 [project]
 name = "memory-store-sync"
-version = "0.1.2"
+version = "0.1.3"
 description = "Per-host agent-memory-mcp store synchronized between workstations through git"
 readme = "README.md"
 license = "MIT"

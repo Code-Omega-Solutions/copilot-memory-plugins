@@ -12,6 +12,24 @@ from memory_store_sync.workspace import StoreLocation
 
 @unittest.skipUnless(os.environ.get("MEMORY_SYNC_LIVE_TEST") == "1", "Opt-in pinned Go server integration")
 class LiveImportTests(unittest.TestCase):
+    def test_empty_import_initializes_a_fresh_database_and_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            location = StoreLocation(root, StoreConfig(), root / "mem", root / "rag", root, True)
+            paths = store.host_paths("local", location.store_root, location.rag_root)
+            out = io.StringIO()
+            self.assertEqual(sync.command_import(location, "local", True, out=out), 0)
+            self.assertFalse(paths.db_path.exists())
+            self.assertEqual(sync.command_import(location, "local", False, out=out), 0, out.getvalue())
+            self.assertTrue(paths.db_path.is_file())
+            self.assertEqual(sync.command_status(location, "local", out=out), 0)
+            self.assertIn("(present)", out.getvalue())
+            self.assertEqual(sync.command_export(location, "local", out=out), 0, out.getvalue())
+            self.assertEqual(store.read_export(paths.export_path), [])
+            before = paths.export_path.read_bytes()
+            self.assertEqual(sync.command_import(location, "local", False, out=out), 0, out.getvalue())
+            self.assertEqual(paths.export_path.read_bytes(), before)
+
     def test_partial_upstream_success_fails_then_reviewed_exclusion_completes_sync(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
