@@ -21,7 +21,7 @@ governed by the workspace's own instructions.
 
 - Agents MUST run the CLI from the workspace root as `memory-store <command>`.
   When `memory-store` is not on `PATH`, agents MUST use
-  `uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins@v0.1.1#subdirectory=plugins/memory-sync" memory-store <command>`.
+  `uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins#subdirectory=plugins/memory-sync" memory-store <command>`.
 - Agents MUST NOT run `init` unless the user asked to enable synchronized memory
   for the workspace. The plugin's `sessionStart` hook runs `setup` automatically;
   with `MEMORY_STORE_AUTO_SETUP=0` the server uses a private per-user store and

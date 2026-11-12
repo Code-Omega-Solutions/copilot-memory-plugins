@@ -19,7 +19,7 @@ test("memory-sync release versions stay aligned across package and catalog files
     const pyproject = await readFile(path.join(root, "plugins/memory-sync/pyproject.toml"), "utf8");
     const packageVersion = /^version\s*=\s*"([^"]+)"/m.exec(pyproject)?.[1];
     const cliPackageVersion = /^__version__\s*=\s*"([^"]+)"/m.exec(packageInit)?.[1];
-    const skillVersion = /copilot-memory-plugins@v(\d+\.\d+\.\d+)#subdirectory=plugins\/memory-sync/.exec(skill)?.[1];
+    assert.ok(skill.includes('uvx --from "git+https://github.com/Code-Omega-Solutions/copilot-memory-plugins#subdirectory=plugins/memory-sync" memory-store <command>'));
     const catalogPlugin = marketplace.plugins.find((item) => item.name === "memory-sync");
     const versions = [
         plugin.version,
@@ -27,7 +27,6 @@ test("memory-sync release versions stay aligned across package and catalog files
         cliPackageVersion,
         catalogPlugin?.version,
         marketplace.metadata.version,
-        skillVersion,
     ];
 
     assert.ok(versions.every((version) => typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version)));
