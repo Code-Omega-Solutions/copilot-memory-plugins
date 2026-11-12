@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 (unreleased)
+
+- Initialize an empty host database when importing without any records.
+
 ## 0.1.1 (unreleased)
 
 - Fail closed when Copilot cannot verify the enabled memory-sync MCP

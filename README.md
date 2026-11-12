@@ -159,7 +159,9 @@ memory-store import   # add new records from other hosts (--dry-run to preview)
 ```
 
 On a machine without a database yet, `import` seeds it from all committed
-exports, including its own. Restart the MCP server afterwards.
+exports, including its own, or initializes an empty database if none contain
+importable records. A dry run does not initialize the database. Restart the MCP
+server afterwards.
 
 **Session end**
 
